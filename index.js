@@ -1,5 +1,5 @@
 const mysql = require('mysql');
-
+const path = require('path');
 const app = require('express')();
 
 // Configuration
@@ -10,6 +10,9 @@ const SQL_USER = "root";
 const SQL_PASSWORD = "root";
 const SQL_DATABASE = "tradeplatform";
 
+app.use(express.static(path.join(__dirname, 'public'))); // Tells Express to serve static files (e.g. images, css, client-side JS files) from public folder.
+app.use(express.json()) // Tells Express to parse JSON request bodies when they come.
+app.use(express.urlencoded({ extended: true })); // Tells Express to parse form-data request bodies when they come.
 
 function buildSqlConnection() {
     return mysql.createConnection({
@@ -20,6 +23,15 @@ function buildSqlConnection() {
         database: SQL_DATABASE
     });
 }
+
+function getHTMLFile(fileName) {
+    return path.join(__dirname, 'templates', fileName);
+}
+
+app.get('/', (req, res) => {
+    res.sendFile(getHTMLFile('index.html'));
+});
+
 
 let sqlConnection = buildSqlConnection();
 
