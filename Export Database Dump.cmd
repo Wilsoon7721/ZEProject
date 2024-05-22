@@ -6,7 +6,7 @@ set DATABASE_NAME=tradeplatform
 set MYSQL_USER=root
 set MYSQL_PASSWORD=root
 
-mysqldump -u %MYSQL_USER% -p%MYSQL_PASSWORD% --databases %DATABASE_NAME% > %DUMP_FILE%
+mysqldump --hex-blob -u %MYSQL_USER% -p%MYSQL_PASSWORD% --databases %DATABASE_NAME% > %DUMP_FILE%
 
 echo Database %DATABASE_NAME% has been exported to %DUMP_FILE%.
 

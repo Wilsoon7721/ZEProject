@@ -1,6 +1,8 @@
 const mysql = require('mysql');
 const path = require('path');
-const app = require('express')();
+const express = require('express');
+
+const app = express();
 
 // Configuration
 const WEB_SERVER_PORT = 3000;
@@ -14,6 +16,7 @@ app.use(express.static(path.join(__dirname, 'public'))); // Tells Express to ser
 app.use(express.json()) // Tells Express to parse JSON request bodies when they come.
 app.use(express.urlencoded({ extended: true })); // Tells Express to parse form-data request bodies when they come.
 
+// Utility Functions
 function buildSqlConnection() {
     return mysql.createConnection({
         host: SQL_HOST, 
@@ -27,6 +30,8 @@ function buildSqlConnection() {
 function getHTMLFile(fileName) {
     return path.join(__dirname, 'templates', fileName);
 }
+
+// Routes
 
 app.get('/', (req, res) => {
     res.sendFile(getHTMLFile('index.html'));
