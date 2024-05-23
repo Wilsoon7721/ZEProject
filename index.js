@@ -102,7 +102,7 @@ app.post('/users', verifyInternal, (req, res) => {
     }
 });
 
-// Login Endpoint
+// Log User In Endpoint
 app.get('/users', verifyInternal, (req, res) => {
     let email = req.get("X-Email");
     let password = req.get("X-Password");
@@ -125,13 +125,25 @@ app.get('/users', verifyInternal, (req, res) => {
 
         if(rememberUser) {
             // Time-specified cookie
-            res.cookie('userID', user.userID, { maxAge: REMEMBER_DURATION });
+            res.cookie('userID', user.id, { maxAge: REMEMBER_DURATION });
         } else {
             // Session cookie
-            res.cookie('userID', user.userID);
+            res.cookie('userID', user.id);
         }
 
         return res.status(200).json({ message: "Login successful.", identity: user.fullName });
+    });
+});
+
+// Retrieve User Info by ID Endpoint
+app.get('/users/:id', verifyInternal, (req, res) => {
+    let userId = req.params.id;
+    sqlConnection.query('SELECT * FROM users WHERE id = ?', [userId], (error, results) => {
+        if(error) {
+            console.error(`Unable to retrieve user info for User ID ${userId}\n`, error);
+            return res.status(500).json({ error: "Internal Server Error" });
+        }
+        return res.json(results);
     });
 });
 
