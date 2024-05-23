@@ -6,7 +6,7 @@ set DATABASE_NAME=tradeplatform
 set MYSQL_USER=root
 set MYSQL_PASSWORD=root
 
-cd %USERPROFILE%\Desktop\ZXProject
+cd %USERPROFILE%\Desktop\ZEProject
 git pull
 
 mysql -u %MYSQL_USER% -p%MYSQL_PASSWORD% -e "DROP DATABASE IF EXISTS %DATABASE_NAME%;"
