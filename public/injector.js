@@ -1,4 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
+    // Load Bootstrap Components
     let link = document.createElement('link');
     link.rel = 'stylesheet';
     link.href = 'https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css';
@@ -15,6 +16,11 @@ document.addEventListener('DOMContentLoaded', () => {
     let jquery = document.createElement('script');
     jquery.src = "https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js";
     document.body.appendChild(jquery);
+
+
+    // Load Common Components
+    
+
 });
 
 function getUserID() {

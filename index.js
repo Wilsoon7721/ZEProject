@@ -46,7 +46,36 @@ const verifyInternal = (req, res, next) => {
 
 // Home/Product Listing Page
 app.get('/', (req, res) => {
-    res.sendFile(getHTMLFile('index.html'));
+    let cookies;
+    try {
+        cookies = req.headers.cookie.split(';');
+    } catch(err) {
+        res.sendFile(getHTMLFile('buyer/index.html'));
+        return;
+    }
+    let userID = -1;
+    for(let cookie of cookies) {
+        cookie = cookie.trim();
+        if(cookie.startsWith("userID")) {
+            let val = cookie.substring("userID=".length);
+            userID = parseInt(val);
+            break;
+        }
+        continue;
+    }
+    sqlConnection.query('SELECT userType FROM users WHERE id = ?', [userID], (error, results) => {
+        if(error) {
+            console.error(`Failed to retrieve userType for User ID ${userID}\n`, error);
+            return res.status(500).json({ error: "Internal Error" });
+        }
+        data = results[0];
+        if(data.userType === 'seller') {
+            res.sendFile(getHTMLFile('seller/index.html'));
+            return;
+        }
+        res.sendFile(getHTMLFile('buyer/index.html'));
+        return;
+    });
 });
 
 // Login Page
