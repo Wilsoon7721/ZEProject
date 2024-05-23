@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="css/auth.css">
+    <title>Authentication</title>
+</head>
+<body>
+    <div class="form-container" id="login-form-container" hidden>
+        <h2>Login</h2>
+        <form id="login-form">
+            <label for="login-useremail">Email Address</label>
+            <input required type="email" name="login-useremail" id="login-user_email_input" placeholder="Enter your email">
+            <br />
+            <label for="login-password">Password</label>
+            <input required type="password" name="login-userpassword" id="login-user_password_input" placeholder="Enter your password">
+            <div class="login-remember-container">
+                <input id="login-remember" type="checkbox" style="transform: scale(1.05)" name="login-remember">
+                <label for="login-remember">Remember</label>
+            </div>
+            <input type="submit" id="login-submit-button" value="Login">
+        </form>
+        <p style="font-size: 12px; color: gray;">Not a member yet? Join us <a href="#" id="switch-register-button">here</a>!</p>
+        <br />
+        <div class="msg-display" id="login-msg-display">
+            <!-- Message -->
+        </div>
+    </div>
+
+    <div class="form-container" id="register-form-container">
+        <h2>Register</h2>
+        <form id="register-form">
+            <label for="reg-fullname">Full Name <span style="font-size: 9px;">(max 100 characters)</span></label>
+            <input type="text" maxlength="100" name="reg-fullname" id="register-fullname-input" placeholder="This name will be used for orders addressed to you.">
+            <br />
+            <!-- Upon registration, verify username to ensure uniqueness -->
+            <label for="reg-username">Username <span style="font-size: 9px;">(max 50 characters)</span></label>
+            <input type="text" maxlength="50" name="reg-username" id="register-username-input" placeholder="This name will be shown to other users.">
+            <br />
+            <label for="reg-email">Email Address</label>
+            <input type="email" maxlength="100" name="reg-email" id="register-email-input" placeholder="Enter your email">
+            <br />
+            <label for="reg-password">Password</label>
+            <input type="password" maxlength="255" name="reg-password" id="register-password-input" placeholder="Enter your password">
+            <br />
+            <label for="reg-userType">You are...</label>
+            <label><input type="radio" name="reg-userType" value="buyer" id="register-type-buyer" required> buying</label>
+            <label><input type="radio" name="reg-userType" value="seller" id="register-type-seller" required> selling</label>
+            <input type="submit" id="register-submit-button" value="Register">
+        </form>
+        <p style="font-size: 12px; color: gray;">Already a member? Login <a href="#" id="switch-login-button">here</a>.</p>
+        <br />
+        <div class="msg-display" id="register-msg-display">
+            <!-- Message -->
+        </div>
+    </div>
+    <script src="auth.js"></script>
+</body>
+</html>
