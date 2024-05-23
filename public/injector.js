@@ -16,3 +16,16 @@ document.addEventListener('DOMContentLoaded', () => {
     jquery.src = "https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js";
     document.body.appendChild(jquery);
 });
+
+function getUserID() {
+    let cookies = document.cookie.split(';');
+    for(let cookie of cookies) {
+        cookie = cookie.trim();
+        if(cookie.startsWith("userID")) {
+            let val = cookie.substring("userID=".length);
+            return parseInt(val);
+        }
+        continue;
+    }
+    return -1;
+}

@@ -34,17 +34,15 @@ document.addEventListener('DOMContentLoaded', () => {
         let loginPassword = document.getElementById('login-user_password_input').value;
         let loginRemember = document.getElementById('login-remember').checked;
         // Do not need to check for missing values because 'required' atrribute active
-        
-        let body = JSON.stringify({
-            email: loginEmail,
-            password: loginPassword,
-            remember: loginRemember
-        });
 
         fetch('/users', {
             method: 'GET',
             headers: {
-                'X-Internal-Endpoint': 'true'
+                'X-Internal-Endpoint': 'true',
+                // Use headers because GET requests cannot have body
+                'X-Email': loginEmail,
+                'X-Password': loginPassword,
+                'X-RememberUser': loginRemember
             }
         })
         .then(async resp => {
@@ -58,13 +56,87 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 msgDisplay.style.border = '1.75px solid #013220';
                 msgDisplay.style.color = 'green';
-                msgDisplay.textContent = "Login success! Redirecting...";
+                msgDisplay.textContent = `Welcome ${data.identity}! Redirecting...`;
                 msgDisplay.style.display = 'block';
+                setTimeout(() => window.location.href = '/', 2000);
             }
         });
     });
+    let registerUsernameElement = document.getElementById('register-username-input');
+    let usernameVerification = document.getElementById('username-verification');
+    let usernameInputIdleCheck;
+    registerUsernameElement.addEventListener('input', () => {
+        clearTimeout(usernameInputIdleCheck);
+        if(registerUsernameElement.value === "") {
+            usernameVerification.innerText = "";
+            return;
+        }
+        usernameVerification.innerText = "Checking...";
+        usernameVerification.style.color = "gray";
+        usernameInputIdleCheck = setTimeout(() => {
+            let username = registerUsernameElement.value;
+            console.log(`${username} with a length of ${username.length}`);
+            let body = JSON.stringify({
+                username: username
+            });
+            console.log(body);
+            fetch('/users', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Internal-Endpoint': 'true',
+                    'X-Verify-Username-Only': 'true'
+                },
+                body: body
+            })
+            .then(async resp => {
+                let data = await resp.json();
+                usernameVerification.innerText = data.message;
+                if(!resp.ok)
+                    usernameVerification.style.color = "red";
+                else
+                    usernameVerification.style.color = "green";
+            });
+        }, 3000);
+    });
     registerForm.addEventListener('submit', (event) => {
         event.preventDefault();
-        let userType = document.querySelector('input[name="userType"]:checked');
+        let registerFullName = document.getElementById('register-fullname-input').value;
+        let registerUsername = registerUsernameElement.value;
+        let registerEmail = document.getElementById('register-email-input').value;
+        let registerPassword = document.getElementById('register-password-input').value;
+        let registerType = String(document.querySelector('input[name="reg-userType"]:checked').getAttribute('value')).trim().toLowerCase(); // Will be 'buyer' or 'seller'
+
+        let body = JSON.stringify({
+            fullname: registerFullName,
+            username: registerUsername,
+            email: registerEmail,
+            password: registerPassword,
+            type: registerType
+        });
+        
+        fetch('/users', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Internal-Endpoint': 'true'
+            },
+            body: body
+        }).then(async resp => {
+            let data = resp.json();
+            if(!resp.ok) {
+                msgDisplay.style.border = '1.75px solid red';
+                msgDisplay.style.color = '#FF7F7F';
+                msgDisplay.textContent = `Error: ${data.message}`;
+                msgDisplay.style.display = 'block';
+                setTimeout(() => msgDisplay.style.display = 'none', 3000);
+            } else {
+                msgDisplay.style.border = '1.75px solid #013220';
+                msgDisplay.style.color = 'green';
+                msgDisplay.textContent = `Registration complete! Redirecting...`;
+                msgDisplay.style.display = 'block';
+                setTimeout(() => window.location.href = '/', 2000);
+            }
+        });
     });
 });
