@@ -3,10 +3,14 @@
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <link rel="stylesheet" href="css/buyer_index.css">
         <title>Product Listing - ShopEasy</title>
     </head>
     <body>
         <!-- NavBar -->
+        <div id="customer-preview" hidden>
+          <img src="images/info_icon.png" style="display: inline"><p style="display: inline">Welcome! You are not logged in. As such, we have displayed a preview of the page. To make purchases, please login or register.</p>
+        </div>
         <nav class="navbar fixed-top navbar-expand-lg navbar-light bg-light">
             <div class="container-fluid d-flex justify-content-start">
                  <a class="navbar-brand mb-0 h1" href="/">ShopEasy</a>
@@ -19,7 +23,7 @@
                      <button id="user-login-button" class="btn btn-outline-success" type="button" onclick="window.location.href = '/auth'">Login / Register</button>
                      <button id="user-logout-button" class="btn btn-outline-danger" type="button" hidden>Log Out</button>
                  </div>
-             </div>
+            </div>
         </nav>
         <h3 id="page-title" class="text-center">Product Listing</h3>
         <div id="auto-margin" style="margin-bottom: 3%;"></div>

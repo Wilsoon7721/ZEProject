@@ -38,5 +38,13 @@ document.addEventListener("DOMContentLoaded", () => {
             setTimeout(() => window.location.href = current, 1000);
             // Consider moving this whole segment into injector.js such that the buttons dont need to have their onclick set multiple times
         });
+
+        // More Logged In User Code
+    } else {
+        // Logged Out, Default Page should show preview banner
+        let previewBanner = document.getElementById('customer-preview');
+        previewBanner.removeAttribute('hidden');
+        let navBar = document.querySelector('.navbar');
+        navBar.classList.remove('fixed-top');
     }
 });

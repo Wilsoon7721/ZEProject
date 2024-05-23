@@ -80,6 +80,27 @@ app.get('/', (req, res) => {
 
 // Login Page
 app.get('/auth', (req, res) => {
+    let cookies;
+    try {
+        cookies = req.headers.cookie.split(';');
+    } catch(err) {
+        res.sendFile(getHTMLFile('auth.html'));
+        return;
+    }
+    let userID = -1;
+    for(let cookie of cookies) {
+        cookie = cookie.trim();
+        if(cookie.startsWith("userID")) {
+            let val = cookie.substring("userID=".length);
+            userID = parseInt(val);
+            if(userID !== -1) {
+                res.redirect('/');
+                return;
+            }
+            break;
+        }
+        continue;
+    }
     return res.sendFile(getHTMLFile('auth.html'));
 });
 
@@ -173,6 +194,73 @@ app.get('/users/:id', verifyInternal, (req, res) => {
             return res.status(500).json({ error: "Internal Server Error" });
         }
         return res.json(results);
+    });
+});
+
+// Delete User By ID
+app.delete('/users/:id', verifyInternal, (req, res) => {
+    let userId = req.params.id;
+    sqlConnection.query('DELETE FROM users WHERE id = ?', [userId], (error, results) => {
+        if(error) {
+            console.error(`Failed to delete User with ID ${userId}\n`, error);
+            return res.status(500).json({ error: "Internal Server Error" });
+        }
+        return res.json();
+    });
+});
+
+// Values expected in JSON (preferred) or Form Data
+// Keys accepted: username, email, fullName, password, address, phoneNumber
+app.put('/users/:id', verifyInternal, (req, res) => {
+    let userId = req.params.id;
+    if(req.body.length === 0) 
+        return res.status(400).json({ error: "Nothing to change." });
+    let q = `UPDATE users SET `;
+    let params = [];
+    if('username' in req.body) {
+        // Will directly update. No uniqueness check
+        q += `username = ?, `;
+        params.push(req.body.username);
+    }
+    if('email' in req.body) {
+        q += `email = ?, `;
+        params.push(req.body.email);
+    }
+    if('fullName' in req.body) {
+        q += `fullName = ?, `;
+        params.push(req.body.fullName);
+    }
+    if('password' in req.body) {
+        q += `password = ?, `;
+        params.push(req.body.password);
+    }
+    if('address' in req.body) {
+        q += `address = ?, `;
+        params.push(req.body.address);
+    }
+    if('phoneNumber' in req.body) {
+        q += `phoneNumber = ?, `;
+        params.push(req.body.phoneNumber);
+    }
+
+    if(params.length === 0)
+        return res.status(400).json({ error: "Nothing to change." });
+    if(q.trim().endsWith(','))
+        q = q.trimEnd().slice(0, -1);
+
+    q += `WHERE id = ?`;
+    params.push(userId);
+    sqlConnection.query(q, params, (error, results) => {
+        if(error) {
+            console.error(`Failed to update user info for user ID ${userId}\n`, error);
+            res.status(500).json({ error: "Internal Server Error" });
+            return;
+        }
+        if(results.affectedRows === 0) {
+            res.status(404).json({ error: "The user does not exist." });
+            return;
+        }
+        return res.json();
     });
 });
 
