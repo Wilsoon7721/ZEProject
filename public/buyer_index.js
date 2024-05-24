@@ -98,7 +98,7 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 // Truncates Description if it exceeds this amount of characters.
-const DESC_MAX_CHARACTERS = 200;
+const DESC_MAX_CHARACTERS = 250;
 function renderProductInfo(productId, title, description, price, stockCount, sellerUsername, createdAt) {
     let mainDiv = document.createElement('div');
     mainDiv.style.maxWidth = '70%';
@@ -174,14 +174,17 @@ function renderProductInfo(productId, title, description, price, stockCount, sel
 
     let addToCartButton = document.createElement('button');
     addToCartButton.classList.add('btn', 'btn-success', 'mb-1');
+    if(stockCount === 0)
+        addToCartButton.classList.add('disabled');
     addToCartButton.textContent = 'Add to Cart';
 
     let viewDescriptionButton = document.createElement('button');
     viewDescriptionButton.classList.add('btn', 'btn-outline-primary');
     viewDescriptionButton.textContent = 'View Description';
-
+    
     addToCartButton.addEventListener('click', () => {
         // Add to cart
+
     });
 
     viewDescriptionButton.addEventListener('click', () => {

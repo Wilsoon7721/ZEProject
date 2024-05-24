@@ -75,11 +75,9 @@ document.addEventListener('DOMContentLoaded', () => {
         usernameVerification.style.color = "gray";
         usernameInputIdleCheck = setTimeout(() => {
             let username = registerUsernameElement.value;
-            console.log(`${username} with a length of ${username.length}`);
             let body = JSON.stringify({
                 username: username
             });
-            console.log(body);
             fetch('/users', {
                 method: 'POST',
                 headers: {
@@ -123,7 +121,7 @@ document.addEventListener('DOMContentLoaded', () => {
             },
             body: body
         }).then(async resp => {
-            let data = resp.json();
+            let data = await resp.json();
             if(!resp.ok) {
                 msgDisplay.style.border = '1.75px solid red';
                 msgDisplay.style.color = '#FF7F7F';

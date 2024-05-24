@@ -104,33 +104,6 @@ app.get('/auth', (req, res) => {
     return res.sendFile(getHTMLFile('auth.html'));
 });
 
-// CART ENDPOINT
-// Accepted keys: productIds
-// productIds should be an array in JSON ([1,2,3,4,5]): No Keys!
-app.post('/cart', verifyInternal, (req, res) => {
-    let { action } = req.query;
-    let data = req.body;
-    let existingProductIds = req.cookies.cart;
-    if('productIds' in body) {
-        if(action.trim().toLowerCase() === 'add') {
-            if(existingProductIds) {
-                let existingData = JSON.parse(existingProductIds);
-                let newData = existingData.concat(data.productIds || []);
-                res.cookie('productIds', JSON.stringify(newData), {
-                    maxAge: 1200000
-                });
-            } else {
-                let newData = data.productIds;
-                res.cookie('productIds', JSON.stringify(newData), {
-                    maxAge: 1200000
-                });
-            }
-        } else {
-            // Cart remove logic
-        }
-    }
-});
-
 // PRODUCTS TABLE ENDPOINTS
 
 // Update Product
