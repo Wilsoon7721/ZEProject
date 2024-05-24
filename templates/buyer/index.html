@@ -20,42 +20,18 @@
                      </li>
                  </ul>
                  <div class="ms-auto">
-                     <button id="user-login-button" class="btn btn-outline-success" type="button" onclick="window.location.href = '/auth'">Login / Register</button>
-                     <button id="user-logout-button" class="btn btn-outline-danger" type="button" hidden>Log Out</button>
-                 </div>
+                    <button id="user-cart-button" class="btn btn-outline-dark position-relative" style="margin-right: 8px;" type="button" hidden>
+                      Cart
+                      <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-dark" id='user-cart-item-count'>0</span>
+                    </button>
+                    <button id="user-login-button" class="btn btn-outline-success" type="button" onclick="window.location.href = '/auth'">Login / Register</button>
+                    <button id="user-logout-button" class="btn btn-outline-danger" type="button" hidden>Log Out</button>
+                  </div>
             </div>
         </nav>
         <h3 id="page-title" class="text-center">Product Listing</h3>
         <div id="auto-margin" style="margin-bottom: 3%;"></div>
-        <div class="card mb-3 mx-auto" style="max-width: 70%;">
-            <div class="row g-0">
-              <div class="col-md-4">
-			    <!-- Image Max Acceptable Resolution: 100% width, 650px height -->
-                <img src="..." class="img-fluid rounded-start" alt="...">
-              </div>
-              <div class="col-md-8">
-                <div class="card-body">
-                  <h5 class="card-title">Card title</h5>
-                  <p class="card-text">This is a wider card with supporting text below as a natural lead-in to additional content. This content is a little bit longer.</p>
-                  <p class="card-text"><small class="text-muted">Last updated 3 mins ago</small></p>
-                </div>
-              </div>
-            </div>
-        </div>
-        <div class="card mb-3 mx-auto" style="max-width: 70%;">
-            <div class="row g-0">
-              <div class="col-md-4">
-                <img src="..." class="img-fluid rounded-start" alt="...">
-              </div>
-              <div class="col-md-8">
-                <div class="card-body">
-                  <h5 class="card-title">Card title</h5>
-                  <p class="card-text">This is a wider card with supporting text below as a natural lead-in to additional content. This content is a little bit longer.</p>
-                  <p class="card-text"><small class="text-muted">Last updated 3 mins ago</small></p>
-                </div>
-              </div>
-            </div>
-        </div>
+        <!-- Products - JS Populated -->
         <script src="buyer_index.js"></script>
         <script src="injector.js"></script>
     </body>

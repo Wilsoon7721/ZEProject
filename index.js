@@ -104,6 +104,122 @@ app.get('/auth', (req, res) => {
     return res.sendFile(getHTMLFile('auth.html'));
 });
 
+// CART ENDPOINT
+// Accepted keys: productIds
+// productIds should be an array in JSON ([1,2,3,4,5]): No Keys!
+app.post('/cart', verifyInternal, (req, res) => {
+    let { action } = req.query;
+    let data = req.body;
+    let existingProductIds = req.cookies.cart;
+    if('productIds' in body) {
+        if(action.trim().toLowerCase() === 'add') {
+            if(existingProductIds) {
+                let existingData = JSON.parse(existingProductIds);
+                let newData = existingData.concat(data.productIds || []);
+                res.cookie('productIds', JSON.stringify(newData), {
+                    maxAge: 1200000
+                });
+            } else {
+                let newData = data.productIds;
+                res.cookie('productIds', JSON.stringify(newData), {
+                    maxAge: 1200000
+                });
+            }
+        } else {
+            // Cart remove logic
+        }
+    }
+});
+
+// PRODUCTS TABLE ENDPOINTS
+
+// Update Product
+// JSON Keys accepted: productName, productDescription, price, quantity
+app.put('/products/:id', verifyInternal, (req, res) => {
+    let id = req.params.id;
+    let params = []
+    let q = 'UPDATE products SET ';
+    if('productName' in req.body) {
+        q += 'productName = ?, ';
+        params.push(req.body.productName);
+    }
+    if('productDescription' in req.body) {
+        q += 'productDescription = ?, ';
+        params.push(req.body.productDescription);
+    }
+    if('price' in req.body) {
+        q += 'price = ?, ';
+        params.push(req.body.price);
+    }
+    if('quantity' in req.body) {
+        q += 'quantity = ?, ';
+        params.push(req.body.quantity);
+    }
+
+    if(params.length === 0)
+        return res.status(400).json({ error: "Nothing to change." });
+    if(q.trim().endsWith(','))
+        q = q.trimEnd().slice(0, -1);
+
+    q += `WHERE id = ?`;
+    params.push(id);
+    sqlConnection.query(q, params, (error, results) => {
+        if(error) {
+            console.error("Failed to update product\n", error);
+            return res.status(500).json({ error: "Internal Server Error" });
+        }
+        if(results.affectedRows === 0)
+            return res.status(404).json({ error: "The product does not exist."});
+        return res.json();
+    });
+});
+
+// Create Product
+// JSON Keys accepted: sellerID, productName, productDescription, price, quantity
+app.post('/products', verifyInternal, (req, res) => {
+    // Remember to add JSON as content type
+    let data = req.body;
+    let sellerId = req.body.sellerID;
+    let productName = req.body.productName;
+    let productDescription = req.body.productDescription;
+    let price = req.body.price;
+    let quantity = req.body.quantity;
+    sqlConnection.query('INSERT INTO products (sellerID, productName, productDescription, price, quantity) VALUES (?, ?, ?, ?, ?)', [sellerId, productName, productDescription, price, quantity], (error, results) => {
+        if(error) {
+            console.error("Failed to create a product.\n", error);
+            return res.status(500).json({ error: "Internal Server Error" });
+        }
+        return res.json({ id: results.insertId });
+    });
+});
+
+app.get('/products/:id', verifyInternal, (req, res) => {
+    let productId = req.params.id;
+    if(productId === 'all') {
+        sqlConnection.query('SELECT * FROM products', (error, results) => {
+            if(error) {
+                console.error("Failed to retrieve all products\n", error);
+                return res.status(500).json({ error: "Internal Server Error" });
+            }
+            return res.json(results);
+        });
+    } else if(!isNaN(productId)) {
+        // Number
+        sqlConnection.query('SELECT * FROM products WHERE id = ?', [productId], (error, results) => {
+            if(error) {
+                console.error("Failed to retrieve all products\n", error);
+                return res.status(500).json({ error: "Internal Server Error" });
+            }
+            if(results.length === 0)
+                return res.status(404).json({ error: "Product does not exist." });
+            return res.json(results);
+        });
+    } else
+        return res.status(400).json({ error: "Product ID must be numeric." });
+});
+
+// USERS TABLE ENDPOINTS
+
 // Register Endpoint
 app.post('/users', verifyInternal, (req, res) => {
     let data = req.body;
