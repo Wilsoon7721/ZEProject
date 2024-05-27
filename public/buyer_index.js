@@ -43,6 +43,24 @@ document.addEventListener("DOMContentLoaded", () => {
 
         // More Logged In User Code
         cartButton.removeAttribute('hidden');
+        cartButton.addEventListener('click', () => {
+            window.location.href = '/cart';
+        });
+        fetch('/cart', {
+            method: 'GET',
+            headers: {
+                'X-Internal-Endpoint': 'true',
+                'X-Return-Size-Only': 'true'
+            }
+        })
+        .then(async resp => {
+            if(!resp.ok) {
+                showToast("Could Not Obtain Cart", "Your existing cart could not be obtained.", "images/cross.jpg");
+                return;
+            }
+            let data = await resp.json();
+            cartItemsCount.innerText = data.size;
+        });
     } else {
         // Logged Out, Default Page should show preview banner
         let previewBanner = document.getElementById('customer-preview');
@@ -182,9 +200,36 @@ function renderProductInfo(productId, title, description, price, stockCount, sel
     viewDescriptionButton.classList.add('btn', 'btn-outline-primary');
     viewDescriptionButton.textContent = 'View Description';
     
+    let cartItemsCount = document.getElementById('user-cart-item-count');
     addToCartButton.addEventListener('click', () => {
         // Add to cart
-
+        let productId = parseInt(addToCartButton.parentNode.getAttribute('product-reference-id'));
+        let addToCartElement = document.querySelector(`[product-reference-id="${productId}"]`);
+        fetch('/cart', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Internal-Endpoint': 'true'
+            },
+            body: JSON.stringify({
+                id: productId
+            })
+        })
+        .then(async resp => {
+            let data = await resp.json();
+            let size = data.newSize;
+            if(resp.status === 409) {
+                showToast("Could Not Add Item", `${data.message}`, 'images/cross.jpg');
+                cartItemsCount.innerText = size;
+                return;
+            } else if(!resp.ok) {
+                showToast("Cart Not Updated", "Could not add this item to cart.", "images/cross.jpg");
+                return;
+            } else {
+                showToast("Cart Updated", `${data.message}`, null);
+                cartItemsCount.innerText = size;
+            }
+        });
     });
 
     viewDescriptionButton.addEventListener('click', () => {
@@ -206,5 +251,26 @@ function renderProductInfo(productId, title, description, price, stockCount, sel
 
     // Append main div to the body (or any specific container)
     document.body.appendChild(mainDiv);
+
+}
+
+function showToast(toastTitle, toastContent, toastImage) {
+    let containerElement = document.getElementById('toast-surrounding-container');
+    let titleElement = document.getElementById("buyerhome-toast-title");
+    let imageElement = document.getElementById("buyerhome-toast-image");
+    let bodyElement = document.getElementById('buyerhome-toast-message');
+    containerElement.style = "";
+    imageElement.src = toastImage || "images/checkmark.png";
+    titleElement.innerText = toastTitle;
+    
+    let toastElement = document.querySelector('.toast');
+    let toast = new bootstrap.Toast(toastElement);
+    bodyElement.textContent = toastContent;
+    toast.show();
+
+    // Fully hide display, prevents invisible overlapping of buttons
+    const hideToastBox = () => setTimeout(() => containerElement.style.display = 'none', 1000);
+    toastElement.removeEventListener('hidden.bs.toast', hideToastBox);
+    toastElement.addEventListener('hidden.bs.toast', hideToastBox);
 
 }

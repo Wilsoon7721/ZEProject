@@ -7,6 +7,19 @@
         <title>Product Listing - ShopEasy</title>
     </head>
     <body>
+        <!-- Toast -->
+        <div id="toast-surrounding-container" style="display: none;" aria-live="polite" aria-atomic="true" class="position-relative">
+            <div class="toast-fixed position-fixed top-0 end-0 mt-3 me-3 p-3" style="z-index: 1050;">
+            <div class="toast" role="alert" aria-live="assertive" aria-atomic="true" data-bs-autohide="true" data-bs-delay="3500">
+                <div class="toast-header">
+                    <img id="buyerhome-toast-image" style="width: 1.25rem; height: 1.25rem;" class="rounded me-2">
+                    <strong id="buyerhome-toast-title" class="me-auto"></strong>
+                    <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+                </div>
+                <div id="buyerhome-toast-message" class="toast-body"></div>
+            </div>
+            </div>
+        </div>
         <!-- NavBar -->
         <div id="customer-preview" hidden>
           <img src="images/info_icon.png" style="display: inline"><p style="display: inline">Welcome! You are not logged in. As such, we have displayed a preview of the page. To make purchases, please login or register.</p>

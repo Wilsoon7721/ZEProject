@@ -104,6 +104,194 @@ app.get('/auth', (req, res) => {
     return res.sendFile(getHTMLFile('auth.html'));
 });
 
+// CART ENDPOINTS
+
+// Loads cart cookies and renders page
+app.get('/cart', (req, res) => {
+    let cookies;
+    try {
+        cookies = req.headers.cookie.split(';');
+    } catch(error) {
+        return res.status(401).json({ message: "No User ID cookie found. Not authorised. "});
+    }
+    let userID = -1;
+    for(let cookie of cookies) {
+        cookie = cookie.trim();
+        if(cookie.startsWith("userID")) {
+            let val = cookie.substring("userID=".length);
+            userID = parseInt(val);
+            break;
+        }
+        continue;
+    }
+    if(req.get('X-Internal-Endpoint')) {
+        if(req.get('X-Return-Size-Only')) {
+            sqlConnection.query('SELECT cart FROM users WHERE id = ?', [userID], (error, results) => {
+                if(error) {
+                    console.error(error);
+                    return res.status(500).json({ message: "Failed to obtain cart size." });
+                }
+                if(results.length === 0)
+                    return res.status(404).json({ message: "User not found." });
+                let cart = {};
+                if(results[0].cart) {
+                    cart = JSON.parse(results[0].cart);
+                }
+                let cartQuantities = 0;
+                for(let key in cart) {
+                    cartQuantities += cart[key]; 
+                }
+                return res.status(200).json({ size: cartQuantities });
+            })
+        } else {
+            sqlConnection.query('SELECT cart FROM users WHERE id = ?', [userID], (error, results) => {
+                if(error) {
+                    console.error(error);
+                    return res.status(500).json({ message: "Failed to obtain cart size." });
+                }
+                if(results.length === 0)
+                    return res.status(404).json({ message: "User not found." });
+                let cart = {};
+                if(results[0].cart) {
+                    cart = JSON.parse(results[0].cart);
+                }
+                return res.json(cart);
+            });
+        }
+    } else {
+        return res.sendFile(getHTMLFile('cart.html'));
+    }
+});
+
+// Add to cart (supply body [id])
+app.post('/cart', verifyInternal, (req, res) => {
+    if (!req.body.id) {
+        return res.status(400).json({ message: "Missing 'id' field for product ID" });
+    }
+    let productId = req.body.id;
+    let cookies;
+    try {
+        cookies = req.headers.cookie.split(';');
+    } catch(error) {
+        return res.status(401).json({ message: "No User ID cookie found. Not authorised. "});
+    }
+    let userID = -1;
+    for(let cookie of cookies) {
+        cookie = cookie.trim();
+        if(cookie.startsWith("userID")) {
+            let val = cookie.substring("userID=".length);
+            userID = parseInt(val);
+            break;
+        }
+        continue;
+    }
+    if(userID === -1)
+        return res.status(401).json({ message: "You are not authorised. "});
+
+    // Perform stock validation
+    let productStock;
+    sqlConnection.query('SELECT quantity FROM products WHERE productID = ?', [productId], (error, results) => {
+        if(error) {
+            console.error(error);
+            return res.status(500).json({ message: "Database query failed." });
+        }
+        productStock = parseInt(results[0].quantity);
+    });
+
+    sqlConnection.query('SELECT cart FROM users WHERE id = ?', [userID], (error, results) => {
+        if(error) {
+            console.error(error);
+            return res.status(500).json({ message: "Database query failed." });
+        }
+        if(results.length === 0)
+            return res.status(404).json({ message: "User not found." });
+        let cart = {};
+        if(results[0].cart) {
+            cart = JSON.parse(results[0].cart);
+        }
+        let limitReached = false;
+        if(cart.hasOwnProperty(productId)) {
+            let quantity = cart[productId];
+            if(quantity >= productStock) {
+                cart[productId] = productStock;
+                limitReached = true;
+            } else {
+                cart[productId] = quantity + 1;   
+            }
+        } else {
+            cart[productId] = 1;
+        }
+        sqlConnection.query('UPDATE users SET cart = ? WHERE id = ?', [JSON.stringify(cart), userID], (error, results) => {
+            if(error) {
+                console.error(error);
+                return res.status(500).json({ message: "Database update failed." });
+            }
+            let cartQuantities = 0;
+            for(let key in cart) {
+                cartQuantities += cart[key];
+            }
+            if(limitReached) {
+                return res.status(409).json({ message: `You have exceeded the maximum limit purchasable for this product.`, newSize: cartQuantities });
+            }
+            return res.json({ message: `+1 of product ID ${productId} added.`, newSize: cartQuantities });
+        });
+    });
+});
+
+// Deletes from cart (supply query parameters ?id=&quantity=)
+app.delete('/cart', verifyInternal, (req, res) => {
+    let id = req.query.id;
+    let quantity = req.query.quantity;
+    let cookies;
+    try {
+        cookies = req.headers.cookie.split(';');
+    } catch(error) {
+        return res.status(401).json({ message: "No User ID cookie found. Not authorised. "});
+    }
+    let userID = -1;
+    for(let cookie of cookies) {
+        cookie = cookie.trim();
+        if(cookie.startsWith("userID")) {
+            let val = cookie.substring("userID=".length);
+            userID = parseInt(val);
+            break;
+        }
+        continue;
+    }
+    if(userID === -1)
+        return res.status(401).json({ message: "You are not authorised. "});
+    sqlConnection.query('SELECT cart FROM users WHERE id = ?', [userID], (error, results) => {
+        if(error) {
+            console.error(error);
+            return res.status(500).json({ message: "Database query failed." });
+        }
+        if(results.length === 0)
+            return res.status(404).json({ message: "User not found." });
+        let cart = {};
+        if(results[0].cart) {
+            cart = JSON.parse(results[0].cart);
+        }
+        let oldQuantity = cart[id] || 0;
+        if(oldQuantity - quantity <= 0) {
+            delete cart[id];
+        } else {
+            cart[id] = oldQuantity - quantity;
+        }
+        sqlConnection.query('UPDATE users SET cart = ? WHERE id = ?', [JSON.stringify(cart), userID], (error, results) => {
+            if(error) {
+                console.error(error);
+                return res.status(500).json({ message: "Database update failed." });
+            }
+            let cartQuantities = 0;
+            for(let key in cart) {
+                cartQuantities += cart[key];
+            }
+            return res.json({ message: `+1 of product ID ${productId} added.`, newSize: cartQuantities });
+        });
+    });
+});
+
+
 // PRODUCTS TABLE ENDPOINTS
 
 // Update Product
