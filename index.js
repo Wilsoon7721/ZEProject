@@ -159,11 +159,11 @@ app.get('/cart', (req, res) => {
             });
         }
     } else {
-        return res.sendFile(getHTMLFile('cart.html'));
+        return res.sendFile(getHTMLFile('buyer/cart.html'));
     }
 });
 
-// Add to cart (supply body [id])
+// Add to cart (supply body [id]) [INCREMENT BY 1]
 app.post('/cart', verifyInternal, (req, res) => {
     if (!req.body.id) {
         return res.status(400).json({ message: "Missing 'id' field for product ID" });
@@ -237,6 +237,68 @@ app.post('/cart', verifyInternal, (req, res) => {
         });
     });
 });
+
+// Put to Cart (sets value. THIS DOES NOT PERFORM ANY STOCK CHECK)
+app.put('/cart', verifyInternal, (req, res) => {
+    let productId = req.body.id;
+    let amount = req.body.amount;
+    let cookies;
+    try {
+        cookies = req.headers.cookie.split(';');
+    } catch(error) {
+        return res.status(401).json({ message: "No User ID cookie found. Not authorised. "});
+    }
+    let userID = -1;
+    for(let cookie of cookies) {
+        cookie = cookie.trim();
+        if(cookie.startsWith("userID")) {
+            let val = cookie.substring("userID=".length);
+            userID = parseInt(val);
+            break;
+        }
+        continue;
+    }
+    if(userID === -1)
+        return res.status(401).json({ message: "You are not authorised. "});
+    let productStock;
+    sqlConnection.query('SELECT quantity FROM products WHERE productID = ?', [productId], (error, results) => {
+        if(error) {
+            console.error(error);
+            return res.status(500).json({ message: "Database query failed." });
+        }
+        productStock = parseInt(results[0].quantity);
+    });
+    sqlConnection.query('SELECT cart FROM users WHERE id = ?', [userID], (error, results) => {
+        if(error) {
+            console.error(error);
+            return res.status(500).json({ message: "Database query failed." });
+        }
+        if(results.length === 0)
+            return res.status(404).json({ message: "User not found." });
+        let cart = {};
+        if(results[0].cart) {
+            cart = JSON.parse(results[0].cart);
+        }
+        let limitReached = false;
+        let quantity = cart[productId];
+        if(quantity >= productStock) {
+            cart[productId] = productStock;
+            limitReached = true;
+        } else {
+            cart[productId] = amount;   
+        }
+        sqlConnection.query('UPDATE users SET cart = ? WHERE id = ?', [JSON.stringify(cart), userID], (error, results) => {
+            if(error) {
+                console.error(error);
+                return res.status(500).json({ message: "Database update failed." });
+            }
+            if(limitReached)
+                return res.status(409).json({ message: 'Limit reached.' });
+            return res.json({ message: 'Successful Modification' });
+        });
+    });
+
+})
 
 // Deletes from cart (supply query parameters ?id=&quantity=)
 app.delete('/cart', verifyInternal, (req, res) => {
@@ -366,7 +428,7 @@ app.get('/products/:id', verifyInternal, (req, res) => {
         });
     } else if(!isNaN(productId)) {
         // Number
-        sqlConnection.query('SELECT * FROM products WHERE id = ?', [productId], (error, results) => {
+        sqlConnection.query('SELECT * FROM products WHERE productId = ?', [productId], (error, results) => {
             if(error) {
                 console.error("Failed to retrieve all products\n", error);
                 return res.status(500).json({ error: "Internal Server Error" });
