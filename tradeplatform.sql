@@ -31,14 +31,14 @@ DROP TABLE IF EXISTS `orders`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `orders` (
-  `orderID` int NOT NULL AUTO_INCREMENT,
+  `orderID` int NOT NULL,
   `buyerID` int NOT NULL,
   `productID` int NOT NULL,
   `quantity` int NOT NULL,
   `orderStatus` enum('pending','shipped','delivered','cancelled') DEFAULT 'pending',
   `createdAt` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   `shipmentStatus` enum('pending','shipped','in transit','delivered','returned') DEFAULT 'pending',
-  PRIMARY KEY (`orderID`),
+  PRIMARY KEY (`orderID`,`productID`),
   KEY `buyerID` (`buyerID`),
   KEY `productID` (`productID`),
   CONSTRAINT `orders_ibfk_1` FOREIGN KEY (`buyerID`) REFERENCES `users` (`id`),
@@ -144,7 +144,7 @@ CREATE TABLE `users` (
 
 LOCK TABLES `users` WRITE;
 /*!40000 ALTER TABLE `users` DISABLE KEYS */;
-INSERT INTO `users` VALUES (1,'testbuyer001','testbuyer@shopeasy.com','test','Test Buyer 001',NULL,NULL,'{\"1\":\"50\"}','buyer','2024-05-23 13:37:42'),(2,'testseller001','testseller@shopeasy.com','test','Test Seller 001',NULL,NULL,NULL,'seller','2024-05-23 13:37:42');
+INSERT INTO `users` VALUES (1,'testbuyer001','testbuyer@shopeasy.com','test','Test Buyer 001',NULL,NULL,'{\"1\":5,\"2\":4}','buyer','2024-05-23 13:37:42'),(2,'testseller001','testseller@shopeasy.com','test','Test Seller 001',NULL,NULL,NULL,'seller','2024-05-23 13:37:42');
 /*!40000 ALTER TABLE `users` ENABLE KEYS */;
 UNLOCK TABLES;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
@@ -157,4 +157,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2024-05-27 17:52:50
+-- Dump completed on 2024-05-28 17:45:03
