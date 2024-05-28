@@ -18,74 +18,90 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         let data = await resp.json();
         let totalPurchaseQuantity = 0;
-        let totalPrice = 0;
         for(let key in data) {
             let val = parseInt(data[key]);
             totalPurchaseQuantity += val;
-            totalPrice += renderCartItem(key, val);
+            renderCartItem(key, val);
         }
 
-        // Upon rendering all cart items, render the final box that summarises and has a pay button.
-        let itemContainer = document.createElement('div');
-        itemContainer.classList.add('cart-item-container');
-        let totalDiv = document.createElement('div');
-        let priceTotal = document.createElement('p');
-        let itemTotal = document.createElement('p');
-        priceTotal.style.margin = "0px";
-        itemTotal.style.margin = "0px";
-        priceTotal.innerText = `Total Price: $${totalPrice}`;
-        itemTotal.innerText = `Total Items: ${totalPurchaseQuantity}`;
-        totalDiv.appendChild(priceTotal);
-        totalDiv.appendChild(itemTotal);
-        let buttonDiv = document.createElement('div');
-        let disposeAllButton = document.createElement('button');
-        let payButton = document.createElement('button');
-        disposeAllButton.id = 'cart-dispose-all-button';
-        disposeAllButton.classList.add('btn', 'btn-outline-danger');
-        disposeAllButton.innerText = 'Delete All';
-        payButton.id = 'cart-payment-button';
-        payButton.classList.add('btn', 'btn-outline-success');
-        payButton.innerText = `Pay $${totalPrice}`;
-        disposeAllButton.addEventListener('click', () => {
-            // TODO Clear Cart Button
-            // Fetch Cart and Delete One By One
+        // Give about 0.5 - 5 seconds before rendering the final box that summarises and has a pay button.
+        // For loop continues upon executing renderCartItem(), but doesn't wait for that to complete.
+        
+        // Explain: Because the for loop doesn't wait for renderCartItem() to finish, the pay button will appear before
+        // the cart items, which is not what we want. As such, we introduce a small delay to prevent the box from appearing too early.
+        setTimeout(() => {
+            let itemContainer = document.createElement('div');
+            itemContainer.classList.add('cart-item-container');
+            itemContainer.style.border = "1.25px solid #8B8000";
+            let totalDiv = document.createElement('div');
+            let priceTotal = document.createElement('p');
+            let itemTotal = document.createElement('p');
+            priceTotal.style.margin = "0px";
+            itemTotal.style.margin = "0px";
+            itemTotal.innerText = `Total Items: ${totalPurchaseQuantity}`;
+            totalDiv.appendChild(priceTotal);
+            totalDiv.appendChild(itemTotal);
+            let buttonDiv = document.createElement('div');
+            let disposeAllButton = document.createElement('button');
+            let payButton = document.createElement('button');
+            disposeAllButton.id = 'cart-dispose-all-button';
+            disposeAllButton.classList.add('btn', 'btn-outline-danger');
+            disposeAllButton.innerText = 'Delete All';
+            disposeAllButton.style.marginRight = '15px';
+            payButton.id = 'cart-payment-button';
+            payButton.classList.add('btn', 'btn-outline-success');
             fetch('/cart', {
                 method: 'GET',
                 headers: {
-                    'X-Internal-Endpoint': 'true'
+                    'X-Internal-Endpoint': 'true',
+                    'X-Return-Price-Only': 'true'
                 }
             })
             .then(async resp => {
-                let data = await resp.json();
-                for(let id in data) {
-                    // id is a string here.
-                    let quantity = data[id];
-                    fetch(`/cart?id=${id}&quantity=${quantity}`, {
-                        method: 'DELETE',
-                        headers: {
-                            'X-Internal-Endpoint': 'true'
-                        }
-                    })
-                    .then(resp => {
-                        if(!resp.ok) {
-                            showToast("Failed to Delete All Cart Items", "Some cart items were not deleted.", "images/cross.jpg");
-                            return;
-                        }
-                    });
+                if(!resp.ok) {
+                    console.error("Failed to retrieve total price.");
+                    return;
                 }
+                let data = await resp.json();
+                let totalPrice = parseFloat(data.price)
+                if(totalPrice === 0) {
+                    // Price is empty, either the item is free or there is nothing.
+                    disposeAllButton.classList.add('disabled');
+                    payButton.innerText = 'Pay $0.00';
+                } else {
+                    priceTotal.innerText = `Total Price: $${totalPrice.toFixed(2)}`;
+                    payButton.innerText = `Pay $${totalPrice.toFixed(2)}`;
+                }
+            });
+
+            disposeAllButton.addEventListener('click', () => {
+                // Send DELETE to cart and add custom header to delete the entire cart regardless of id and quantity.
+                fetch(`/cart`, {
+                    method: 'DELETE',
+                    headers: {
+                       'X-Internal-Endpoint': 'true',
+                       'X-Wipe-Cart': 'true'
+                    },
+                }).then(resp => {
+                    if(!resp.ok) {
+                        showToast("Failed to Delete All Cart Items", "Some cart items were not deleted.", "images/cross.jpg");
+                        return;
+                    }
+                });
                 showToast("Deleted All Cart Items", "All cart items have been deleted.", null);
                 setTimeout(() => window.location.href = '/cart', 2000);
-            })
-        });
+            });
 
-        payButton.addEventListener('click', () => {
-            // TODO Pay Button (link to orders table)
-        });
-        buttonDiv.appendChild(disposeAllButton);
-        buttonDiv.appendChild(payButton);
-        itemContainer.appendChild(totalDiv);
-        itemContainer.appendChild(buttonDiv);
-        cartItemHolder.appendChild(itemContainer);
+            payButton.addEventListener('click', () => {
+                // TODO Pay Button (link to orders table)
+                
+            });
+            buttonDiv.appendChild(disposeAllButton);
+            buttonDiv.appendChild(payButton);
+            itemContainer.appendChild(totalDiv);
+            itemContainer.appendChild(buttonDiv);
+            cartItemHolder.appendChild(itemContainer);
+        }, 500);
     });
 });
 
@@ -123,7 +139,7 @@ function renderCartItem(productId, purchaseQuantity) {
         let totalItemPrice = data.price * purchaseQuantity;
         price.style.marginRight = '10px';
         price.style.marginTop = '15px';
-        price.innerText = `${purchaseQuantity} × $${data.price}/ea = $${totalItemPrice}`;
+        price.innerText = `${purchaseQuantity} × $${parseFloat(data.price).toFixed(2)}/ea = $${parseFloat(totalItemPrice).toFixed(2)}`;
         buttonDisplay.append(price);
 
         let qtyInput = document.createElement('input');
@@ -195,7 +211,7 @@ function renderCartItem(productId, purchaseQuantity) {
             }
             if(event.target.classList.contains('item-delete-button')) {
                 // Delete item from code
-                let cartItemContainer = target.closest('[cart-product-id]');
+                let cartItemContainer = event.target.closest('[cart-product-id]');
                 if(!cartItemContainer)
                     return;
 
@@ -219,8 +235,6 @@ function renderCartItem(productId, purchaseQuantity) {
                 });
             }
         });
-
-        return totalItemPrice;
     });
 }
 

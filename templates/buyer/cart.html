@@ -25,7 +25,10 @@
              <a class="navbar-brand mb-0 h1" href="/">ShopEasy</a>
              <ul class="navbar-nav">
                  <li class="nav-item">
-                     <a class="nav-link active" href="/">Product Listing</a>
+                     <a class="nav-link" href="/">Product Listing</a>
+                 </li>
+                 <li class="nav-item">
+                    <a class="nav-link" href="/orders">My Orders</a>
                  </li>
              </ul>
              <div class="ms-auto">
@@ -41,25 +44,8 @@
     <h3 id="page-title" class="text-center">Your Cart</h3>
     <div id="auto-margin" style="margin-bottom: 3%;"></div>
     <div id="cart-items-holding-container" style="display: flex; flex-direction: column; justify-content: space-between; width: 100%">
-        <div class="cart-item-container">
-            <div>
-                <p style="margin: 0px">Total Price: $Price</p>
-                <p style="margin: 0px">Total Items: Item Count</p>
-            </div>
-            <div>
-                <button id="cart-dispose-all-button" class="btn btn-outline-danger">Delete All</button>
-                <button id="payment-button" class="btn btn-outline-success">Pay</button>
-            </div>
-        </div>
-        <div style="margin: auto; border-radius: 20px; border: 1.25px solid lightgray; padding: 20px; width: 50%">
-            Hey! This is mE!
-        </div>
-        <div style="margin: auto; border-radius: 20px; border: 1.25px solid lightgray; padding: 20px; width: 50%">
-            Hey! This is mE!
-        </div>
-        <div style="margin: auto; border-radius: 20px; border: 1.25px solid lightgray; padding: 20px; width: 50%">
-            Hey! This is mE!
-        </div>
+        <!-- Cart Items Populated By JS -->
+        <!-- Final Payment Amount Box also Populated by JS -->
     </div>
     <script src="cart.js"></script>
     <script src="injector.js"></script>

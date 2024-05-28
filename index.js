@@ -104,6 +104,25 @@ app.get('/auth', (req, res) => {
     return res.sendFile(getHTMLFile('auth.html'));
 });
 
+// ORDERS ENDPOINTS
+
+// Create an order (JSON keys accepted: orderID, buyerID, productID, quantity)
+// COMPOSITE PRIMARY KEY: orderID, productID
+app.post('/orders', verifyInternal, (req, res) => {
+    let orderID = req.body.orderID;
+    let buyerID = req.body.buyerID;
+    let productID = req.body.productID;
+    let quantity = req.body.quantity;
+    
+});
+
+// Updates an order (JSON keys accepted: orderID, buyerID, productID, quantity, orderStatus, shipmentStatus)
+// Updating requires orderID and productID because of composite primary key.
+app.put('/orders', verifyInternal, (req, res) => {
+    let orderID = req.body.orderID;
+    let productID = req.body.productID;
+});
+
 // CART ENDPOINTS
 
 // Loads cart cookies and renders page
@@ -125,7 +144,47 @@ app.get('/cart', (req, res) => {
         continue;
     }
     if(req.get('X-Internal-Endpoint')) {
-        if(req.get('X-Return-Size-Only')) {
+        if(req.get('X-Return-Price-Only')) {
+            sqlConnection.query('SELECT cart FROM users WHERE id = ?', [userID], (error, results) => {
+                if(error) {
+                    console.error(error);
+                    return res.status(500).json({ message: "Failed to obtain cart total." });
+                }
+                if(results.length === 0)
+                    return res.status(404).json({ message: "User not found." });
+                let cart = {}
+                if(results[0].cart) {
+                    cart = JSON.parse(results[0].cart);
+                }
+                let totalPrice = 0;
+                let productQueries = Object.keys(cart).map(productId => {
+                        let cartQuantity = parseInt(cart[productId]);
+                        return new Promise((resolve, reject) => {
+                            sqlConnection.query(`SELECT price FROM products WHERE productID = ?`, [productId], (error, results) => {
+                                if(error) {
+                                    reject(error);
+                                } else {
+                                    if(!results || results.length === 0) {
+                                        totalPrice += 0;
+                                        resolve();
+                                    } else {
+                                        let productPrice = parseFloat(results[0].price);
+                                        totalPrice += (productPrice * cartQuantity);
+                                        resolve();
+                                    }
+                                }
+                            });
+                        });
+                    });
+
+                Promise.all(productQueries).then(() => {
+                    return res.json({ price: totalPrice }); 
+                }).catch(error => {
+                    console.error(error);
+                    return res.status(500).json({ message: "Failed to obtain cart total." });
+                });
+            });
+        } else if(req.get('X-Return-Size-Only')) {
             sqlConnection.query('SELECT cart FROM users WHERE id = ?', [userID], (error, results) => {
                 if(error) {
                     console.error(error);
@@ -298,10 +357,8 @@ app.put('/cart', verifyInternal, (req, res) => {
     });
 });
 
-// Deletes from cart (supply query parameters ?id=&quantity=)
+// Deletes from cart (supply query parameters ?id=&quantity=, or special header for ALL)
 app.delete('/cart', verifyInternal, (req, res) => {
-    let id = req.query.id;
-    let quantity = req.query.quantity;
     let cookies;
     try {
         cookies = req.headers.cookie.split(';');
@@ -320,6 +377,17 @@ app.delete('/cart', verifyInternal, (req, res) => {
     }
     if(userID === -1)
         return res.status(401).json({ message: "You are not authorised. "});
+    if(req.get('X-Wipe-Cart')) {
+        sqlConnection.query('UPDATE users SET cart = NULL WHERE id = ?', [userID], (error, results) => {
+            if(error) {
+                console.error(error);
+                return res.status(500).json({ message: "Cart could not be cleared." });
+            }
+        });
+        return res.json();
+    }
+    let id = req.query.id;
+    let quantity = req.query.quantity;
     sqlConnection.query('SELECT cart FROM users WHERE id = ?', [userID], (error, results) => {
         if(error) {
             console.error(error);

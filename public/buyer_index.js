@@ -45,8 +45,34 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     })
 
-    // Update Cart Count
-
+    // Also use timeout to modify the remaining stock in the productInfo
+    setTimeout(() => {
+        // Handle products in cart
+        fetch('/cart', {
+            method: 'GET',
+            headers: {
+                'X-Internal-Endpoint': 'true'
+            }
+        })
+        .then(async resp => {
+            let data = await resp.json();
+            for(let productId in data) {
+                let cartQuantity = data[productId];
+                let productDiv = document.querySelector(`[product-reference-id="${productId}"]`);
+                let stockAvailableElement = productDiv.querySelector('.stock-available-count');
+                let addToCartButton = productDiv.querySelector('.add-to-cart-button');
+                let originalStock = parseInt(stockAvailableElement.textContent.split(" ")[0]);
+                let stockRemaining = originalStock - cartQuantity;
+                console.log(stockRemaining);
+                if(stockRemaining <= 0) {
+                    stockAvailableElement.textContent = `0 available ◦ In your cart`;
+                    addToCartButton.classList.add('disabled');
+                } else {
+                    stockAvailableElement.textContent = `${stockRemaining} available ◦ In your cart`;
+                }
+            }
+        });
+    }, 500);
 });
 
 // Truncates Description if it exceeds this amount of characters.
@@ -114,6 +140,7 @@ function renderProductInfo(productId, title, description, price, stockCount, sel
     innerButtonColDiv.setAttribute('product-reference-id', productId);
 
     let stockElement = document.createElement('p');
+    stockElement.classList.add('stock-available-count');
     stockElement.style.marginBottom = '5px';
     if (stockCount !== 0) {
         stockElement.style.marginRight = '15px';
@@ -135,6 +162,7 @@ function renderProductInfo(productId, title, description, price, stockCount, sel
     viewDescriptionButton.textContent = 'View Description';
     
     let cartItemsCount = document.getElementById('user-cart-item-count');
+    
     addToCartButton.addEventListener('click', () => {
         // Add to cart
         let productId = parseInt(addToCartButton.parentNode.getAttribute('product-reference-id'));
@@ -164,6 +192,15 @@ function renderProductInfo(productId, title, description, price, stockCount, sel
                 return; 
             } else {
                 showToast("Cart Updated", `${data.message}`, null);
+                let itemStockCountElement = addToCartButton.parentNode.querySelector('.stock-available-count');
+                let oldStock = parseInt(itemStockCountElement.textContent.split(" ")[0]);
+                if(oldStock - 1 <= 0) {
+                    // Disable if no more stock
+                    addToCartButton.classList.add('disabled');
+                    itemStockCountElement.textContent = `0 available ◦ In your cart`;
+                } else {
+                    itemStockCountElement.textContent = `${oldStock - 1} available ◦ In your cart`;
+                }
                 cartItemsCount.innerText = size;
             }
         });
