@@ -1,5 +1,10 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // Query database here, and obtain JSON {productId (string): quantity (integer)}. Send the pair into renderCartItem()
+    // Obtain user cookie
+    let cartItemHolder = document.getElementById('cart-items-holding-container');
+    let userID = getUserID();
+    
+    // Query database here, and obtain JSON {productId (string): quantity (integer)}. 
+    // Send the pair into renderCartItem()
     fetch('/cart', {
         method: 'GET',
         headers: {
@@ -12,10 +17,75 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         let data = await resp.json();
+        let totalPurchaseQuantity = 0;
+        let totalPrice = 0;
         for(let key in data) {
-            let val = data[key];
-            renderCartItem(key, val);
+            let val = parseInt(data[key]);
+            totalPurchaseQuantity += val;
+            totalPrice += renderCartItem(key, val);
         }
+
+        // Upon rendering all cart items, render the final box that summarises and has a pay button.
+        let itemContainer = document.createElement('div');
+        itemContainer.classList.add('cart-item-container');
+        let totalDiv = document.createElement('div');
+        let priceTotal = document.createElement('p');
+        let itemTotal = document.createElement('p');
+        priceTotal.style.margin = "0px";
+        itemTotal.style.margin = "0px";
+        priceTotal.innerText = `Total Price: $${totalPrice}`;
+        itemTotal.innerText = `Total Items: ${totalPurchaseQuantity}`;
+        totalDiv.appendChild(priceTotal);
+        totalDiv.appendChild(itemTotal);
+        let buttonDiv = document.createElement('div');
+        let disposeAllButton = document.createElement('button');
+        let payButton = document.createElement('button');
+        disposeAllButton.id = 'cart-dispose-all-button';
+        disposeAllButton.classList.add('btn', 'btn-outline-danger');
+        disposeAllButton.innerText = 'Delete All';
+        payButton.id = 'cart-payment-button';
+        payButton.classList.add('btn', 'btn-outline-success');
+        payButton.innerText = `Pay $${totalPrice}`;
+        disposeAllButton.addEventListener('click', () => {
+            // TODO Clear Cart Button
+            // Fetch Cart and Delete One By One
+            fetch('/cart', {
+                method: 'GET',
+                headers: {
+                    'X-Internal-Endpoint': 'true'
+                }
+            })
+            .then(async resp => {
+                let data = await resp.json();
+                for(let id in data) {
+                    // id is a string here.
+                    let quantity = data[id];
+                    fetch(`/cart?id=${id}&quantity=${quantity}`, {
+                        method: 'DELETE',
+                        headers: {
+                            'X-Internal-Endpoint': 'true'
+                        }
+                    })
+                    .then(resp => {
+                        if(!resp.ok) {
+                            showToast("Failed to Delete All Cart Items", "Some cart items were not deleted.", "images/cross.jpg");
+                            return;
+                        }
+                    });
+                }
+                showToast("Deleted All Cart Items", "All cart items have been deleted.", null);
+                setTimeout(() => window.location.href = '/cart', 2000);
+            })
+        });
+
+        payButton.addEventListener('click', () => {
+            // TODO Pay Button (link to orders table)
+        });
+        buttonDiv.appendChild(disposeAllButton);
+        buttonDiv.appendChild(payButton);
+        itemContainer.appendChild(totalDiv);
+        itemContainer.appendChild(buttonDiv);
+        cartItemHolder.appendChild(itemContainer);
     });
 });
 
@@ -40,7 +110,6 @@ function renderCartItem(productId, purchaseQuantity) {
         cartItemContainer.classList.add('cart-item-container');
         let productTitle = document.createElement('div');
         productTitle.style.textAlign = 'left';
-        console.log(data);
         productTitle.innerText = data.productName;
         cartItemContainer.appendChild(productTitle);
 
@@ -51,9 +120,10 @@ function renderCartItem(productId, purchaseQuantity) {
         cartItemContainer.appendChild(buttonDisplay);
 
         let price = document.createElement('p');
+        let totalItemPrice = data.price * purchaseQuantity;
         price.style.marginRight = '10px';
         price.style.marginTop = '15px';
-        price.innerText = `${purchaseQuantity} × ${data.price} = $${data.price * purchaseQuantity}`;
+        price.innerText = `${purchaseQuantity} × $${data.price}/ea = $${totalItemPrice}`;
         buttonDisplay.append(price);
 
         let qtyInput = document.createElement('input');
@@ -62,6 +132,8 @@ function renderCartItem(productId, purchaseQuantity) {
         qtyInput.style.width = '35px';
         qtyInput.style.height = '37px';
         qtyInput.style.textAlign = 'center';
+        // Custom class for event delegation
+        qtyInput.classList.add('qty-input');
         qtyInput.value = purchaseQuantity;
         buttonDisplay.append(qtyInput);
 
@@ -81,8 +153,15 @@ function renderCartItem(productId, purchaseQuantity) {
             if(!event.target)
                 return;
             if(event.target.classList.contains('qty-update-button')) {
-                let productId = event.target.parentNode.getAttribute('cart-product-id');
-                let newValue = qtyInput.value;
+                let cartItemContainer = event.target.closest('[cart-product-id]');
+                if(!cartItemContainer)
+                    return;
+                let productId = cartItemContainer.getAttribute('cart-product-id');
+                let qtyInputField = cartItemContainer.querySelector('.qty-input');
+                if(!qtyInputField)
+                    return;
+
+                let newValue = qtyInputField.value;
                 if(isNaN(newValue)) {
                     showToast("Cannot Update New Quantity", "You need to specify a valid number.", "images/cross.jpg");
                     return;
@@ -116,18 +195,33 @@ function renderCartItem(productId, purchaseQuantity) {
             }
             if(event.target.classList.contains('item-delete-button')) {
                 // Delete item from code
-                let productId = event.target.parentNode.getAttribute('cart-product-id');
+                let cartItemContainer = target.closest('[cart-product-id]');
+                if(!cartItemContainer)
+                    return;
 
+                let productId = cartItemContainer.getAttribute('cart-product-id');
+                fetch(`/cart?id=${productId}&quantity=all`, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-Internal-Endpoint': 'true'
+                    }
+                })
+                .then(async resp => {
+                    let refreshPage = window.location.href;
+                    if(!resp.ok) {
+                        showToast("Item Not Deleted", "An error occurred while trying to delete this item.", "images/cross.jpg");
+                        return;
+                    }
+                    let data = await resp.json();
+                    showToast("Item Deleted", data.message, null);
+                    // Refresh Page
+                    setTimeout(() => window.location.href = refreshPage, 3000);
+                });
             }
-            
         });
 
-
+        return totalItemPrice;
     });
-    // Calculate Price from Quantity
-    // Set up event delegation by putting productId in larger container so that changes can be made easily
-    // Title should be truncated to prevent it from overlapping buttons. 
-    // Build UI elements and append to 'cartItemHolder'
 }
 
 function showToast(toastTitle, toastContent, toastImage) {

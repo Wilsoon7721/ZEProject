@@ -112,7 +112,7 @@ app.get('/cart', (req, res) => {
     try {
         cookies = req.headers.cookie.split(';');
     } catch(error) {
-        return res.status(401).json({ message: "No User ID cookie found. Not authorised. "});
+        return res.redirect('/');
     }
     let userID = -1;
     for(let cookie of cookies) {
@@ -228,7 +228,7 @@ app.post('/cart', verifyInternal, (req, res) => {
             }
             let cartQuantities = 0;
             for(let key in cart) {
-                cartQuantities += cart[key];
+                cartQuantities += parseInt(cart[key]);
             }
             if(limitReached) {
                 return res.status(409).json({ message: `You have exceeded the maximum limit purchasable for this product.`, newSize: cartQuantities });
@@ -241,7 +241,7 @@ app.post('/cart', verifyInternal, (req, res) => {
 // Put to Cart (sets value. THIS DOES NOT PERFORM ANY STOCK CHECK)
 app.put('/cart', verifyInternal, (req, res) => {
     let productId = req.body.id;
-    let amount = req.body.amount;
+    let amount = parseInt(req.body.amount);
     let cookies;
     try {
         cookies = req.headers.cookie.split(';');
@@ -280,8 +280,7 @@ app.put('/cart', verifyInternal, (req, res) => {
             cart = JSON.parse(results[0].cart);
         }
         let limitReached = false;
-        let quantity = cart[productId];
-        if(quantity >= productStock) {
+        if(amount >= productStock) {
             cart[productId] = productStock;
             limitReached = true;
         } else {
@@ -297,8 +296,7 @@ app.put('/cart', verifyInternal, (req, res) => {
             return res.json({ message: 'Successful Modification' });
         });
     });
-
-})
+});
 
 // Deletes from cart (supply query parameters ?id=&quantity=)
 app.delete('/cart', verifyInternal, (req, res) => {
@@ -330,14 +328,17 @@ app.delete('/cart', verifyInternal, (req, res) => {
         if(results.length === 0)
             return res.status(404).json({ message: "User not found." });
         let cart = {};
+        let customMessage;
         if(results[0].cart) {
             cart = JSON.parse(results[0].cart);
         }
         let oldQuantity = cart[id] || 0;
-        if(oldQuantity - quantity <= 0) {
+        if(quantity == 'all' || oldQuantity - parseInt(quantity) <= 0) {
             delete cart[id];
+            customMessage = "This item has been deleted.";
         } else {
             cart[id] = oldQuantity - quantity;
+            customMessage = `You have removed ${quantity} of this item.`;
         }
         sqlConnection.query('UPDATE users SET cart = ? WHERE id = ?', [JSON.stringify(cart), userID], (error, results) => {
             if(error) {
@@ -346,9 +347,9 @@ app.delete('/cart', verifyInternal, (req, res) => {
             }
             let cartQuantities = 0;
             for(let key in cart) {
-                cartQuantities += cart[key];
+                cartQuantities += parseInt(cart[key]);
             }
-            return res.json({ message: `+1 of product ID ${productId} added.`, newSize: cartQuantities });
+            return res.json({ message: customMessage, newSize: cartQuantities });
         });
     });
 });

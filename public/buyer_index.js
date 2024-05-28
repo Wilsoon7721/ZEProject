@@ -14,7 +14,6 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
         let results = await resp.json();
-        let addLast = [];
         for(let i = 0; i < results.length; i++) {
             let productId = results[i].productID;
             let sellerId = results[i].sellerID;
@@ -45,6 +44,9 @@ document.addEventListener("DOMContentLoaded", () => {
             }); 
         }
     })
+
+    // Update Cart Count
+
 });
 
 // Truncates Description if it exceeds this amount of characters.
@@ -123,7 +125,7 @@ function renderProductInfo(productId, title, description, price, stockCount, sel
     innerButtonColDiv.appendChild(stockElement);
 
     let addToCartButton = document.createElement('button');
-    addToCartButton.classList.add('btn', 'btn-success', 'mb-1');
+    addToCartButton.classList.add('btn', 'btn-success', 'mb-1', 'add-to-cart-button');
     if(stockCount === 0)
         addToCartButton.classList.add('disabled');
     addToCartButton.textContent = 'Add to Cart';
@@ -136,7 +138,10 @@ function renderProductInfo(productId, title, description, price, stockCount, sel
     addToCartButton.addEventListener('click', () => {
         // Add to cart
         let productId = parseInt(addToCartButton.parentNode.getAttribute('product-reference-id'));
-        let addToCartElement = document.querySelector(`[product-reference-id="${productId}"]`);
+        if(getUserID() === -1) {
+            window.location.href = '/auth';
+            return;
+        }
         fetch('/cart', {
             method: 'POST',
             headers: {
@@ -149,14 +154,14 @@ function renderProductInfo(productId, title, description, price, stockCount, sel
         })
         .then(async resp => {
             let data = await resp.json();
-            let size = data.newSize;
+            let size = parseInt(data.newSize);
             if(resp.status === 409) {
                 showToast("Could Not Add Item", `${data.message}`, 'images/cross.jpg');
                 cartItemsCount.innerText = size;
                 return;
             } else if(!resp.ok) {
                 showToast("Cart Not Updated", "Could not add this item to cart.", "images/cross.jpg");
-                return;
+                return; 
             } else {
                 showToast("Cart Updated", `${data.message}`, null);
                 cartItemsCount.innerText = size;

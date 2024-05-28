@@ -42,14 +42,13 @@
     <div id="auto-margin" style="margin-bottom: 3%;"></div>
     <div id="cart-items-holding-container" style="display: flex; flex-direction: column; justify-content: space-between; width: 100%">
         <div class="cart-item-container">
-            <div style="text-align: left;">
-                Product Title
+            <div>
+                <p style="margin: 0px">Total Price: $Price</p>
+                <p style="margin: 0px">Total Items: Item Count</p>
             </div>
-            <div style="display: flex; line-height: 5px;">
-                <p style="margin-right: 10px; margin-top: 15px;">5 × $10/ea = $50</p>
-                <input type="text" placeholder="Qty" style="width: 35px; height: 37px;"> 
-                <button title="Update Quantity" class="btn btn-outline-warning bi bi-arrow-repeat qty-update-button"></button>
-                <button title="Delete From Cart" class="btn btn-outline-danger bi bi-trash item-delete-button"></button>
+            <div>
+                <button id="cart-dispose-all-button" class="btn btn-outline-danger">Delete All</button>
+                <button id="payment-button" class="btn btn-outline-success">Pay</button>
             </div>
         </div>
         <div style="margin: auto; border-radius: 20px; border: 1.25px solid lightgray; padding: 20px; width: 50%">
