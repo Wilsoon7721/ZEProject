@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="css/pay.css">
+    <title>Payment</title>
+</head>
+<body>
+    <div class="payment-container">
+        <div style="text-align: center;">
+            <h2 id="container-header">Complete Your Payment</h2>
+            <br />
+            <form id="payment-type-form">
+                <div class="payment-type">
+                    <input type="radio" checked name="payment-type" id="payment-type" value="creditcard">
+                    <img src="images/creditcard.jpg" class="payment-type-img">
+                    <p class="payment-type-name">Credit Card</p>
+                </div>
+                <input type="submit" value="Pay ${Amount}">
+            </form>
+        </div>
+    </div>
+
+    <script src="payment.js"></script>
+</body>
+</html>

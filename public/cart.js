@@ -1,3 +1,5 @@
+const e = require("express");
+
 document.addEventListener('DOMContentLoaded', () => {
     // Obtain user cookie
     let cartItemHolder = document.getElementById('cart-items-holding-container');
@@ -67,6 +69,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 if(totalPrice === 0) {
                     // Price is empty, either the item is free or there is nothing.
                     disposeAllButton.classList.add('disabled');
+                    if(totalPurchaseQuantity === 0)
+                        // Truly nothing in the cart
+                        payButton.classList.add('disabled');
                     payButton.innerText = 'Pay $0.00';
                 } else {
                     priceTotal.innerText = `Total Price: $${totalPrice.toFixed(2)}`;
@@ -91,10 +96,31 @@ document.addEventListener('DOMContentLoaded', () => {
                 showToast("Deleted All Cart Items", "All cart items have been deleted.", null);
                 setTimeout(() => window.location.href = '/cart', 2000);
             });
-
+            let commonHeaders = {
+                'Content-Type': 'application/json',
+                'X-Internal-Endpoint': 'true'
+            };
             payButton.addEventListener('click', () => {
-                // TODO Pay Button (link to orders table)
+                // TODO Pay Button
+                // Create entry in payments table
+                // Redirect to GET payments
                 
+                // Fetch order_id first to retrieve next Order ID
+                // Fetch cart  to retrieve productIDs and quantities
+                // Then post to orders to obtain orderID
+                // Then post to payments to obtain paymentID
+                // Kickoff by sending paymentID to /pay.
+
+                let orderID;
+                getNextOrderID().then(id => orderID = id);
+                fetch('/cart', {
+                    method: 'GET',
+                    headers: commonHeaders
+                })
+                .then(async resp => {
+                    let cart = await resp.json();
+                    
+                });
             });
             buttonDiv.appendChild(disposeAllButton);
             buttonDiv.appendChild(payButton);
@@ -104,6 +130,23 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 500);
     });
 });
+
+async function getNextOrderID() {
+    try {
+        let resp = await fetch('/order_id', {
+            method: 'GET',
+            headers: commonHeaders
+        });    
+        if(!resp.ok) {
+            console.error(`Failed to obtain the next order ID: HTTP response code ${resp.status()} received.`);
+            return;
+        }
+        let data = await resp.json();
+        return data.id;
+    } catch(error) {
+        console.error("Failed to obtain the next order ID.\n", error);
+    }
+}
 
 const ITEM_TITLE_MAX_CHARS = 16;
 function renderCartItem(productId, purchaseQuantity) {
@@ -174,18 +217,18 @@ function renderCartItem(productId, purchaseQuantity) {
                     return;
                 let productId = cartItemContainer.getAttribute('cart-product-id');
                 let qtyInputField = cartItemContainer.querySelector('.qty-input');
+                let delButton = cartItemContainer.querySelector('.item-delete-button');
                 if(!qtyInputField)
                     return;
 
-                let newValue = qtyInputField.value;
+                let newValue = parseInt(qtyInputField.value);
                 if(isNaN(newValue)) {
                     showToast("Cannot Update New Quantity", "You need to specify a valid number.", "images/cross.jpg");
                     return;
                 }
-                // Also have to check stock based on the POST result again.
                 if(newValue === 0) {
                     // If the user is planning to update to zero, just simulate the press of the delete button.
-                    itemDeleteButton.click();
+                    delButton.click();
                     return;
                 }
                 fetch('/cart', {
@@ -202,10 +245,10 @@ function renderCartItem(productId, purchaseQuantity) {
                 .then(async resp => {
                     let refreshPage = window.location.href;
                     if(resp.status === 409)
-                        showToast('Maximum Quantity Reached', 'You have exceeded the maximum amount purchasable.', 'images/cross.jpg');
+                        showToast('Maximum Quantity Reached', 'You have exceeded the maximum amount purchasable. Quantity has been set to maximum available.', 'images/cross.jpg');
                     else
                         showToast('Cart Quantity Changed', 'You have changed the quantity of a product.', null);
-                    setTimeout(() => window.location.href = refreshPage, 3000);
+                    setTimeout(() => window.location.href = refreshPage, 1500);
                 });
                 return;
             }
@@ -231,7 +274,7 @@ function renderCartItem(productId, purchaseQuantity) {
                     let data = await resp.json();
                     showToast("Item Deleted", data.message, null);
                     // Refresh Page
-                    setTimeout(() => window.location.href = refreshPage, 3000);
+                    setTimeout(() => window.location.href = refreshPage, 1500);
                 });
             }
         });

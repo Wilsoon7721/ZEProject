@@ -1,0 +1,52 @@
+.payment-container {
+    margin: 150px auto; 
+    padding: 30px; 
+    max-width: 500px; 
+    max-height: 250px; 
+    border: 1.25px solid black; 
+    display: flex; 
+    justify-content: center; 
+    align-items: center;
+}
+
+#container-header {
+    font-size: 20px; 
+    font-family: sans-serif;
+}
+
+.payment-type {
+    display: flex; 
+    align-items: center;
+}
+
+.payment-type-img {
+    width: 75px; 
+    height: 75px; 
+    display: inline;
+}
+
+.payment-type-name {
+    display: inline; 
+    margin-left: 10px; 
+    font-family: sans-serif; 
+    font-size: 15px;
+}
+
+input[type="submit"] {
+    padding: 10px;
+    border: none;
+    border-radius: 5px;
+    color: #fff;
+    font-size: 18px;
+    background-color: #3CB371;
+    cursor: pointer;
+    margin-top: 20px;
+    margin-bottom: 20px;
+    width: 100%;
+    border-radius: 20px;
+    box-shadow: 0px 0px 5px 0px rgba(0, 0, 0, 0.2);
+}
+
+input[type="submit"]:hover {
+    background-color: #368e63;
+}

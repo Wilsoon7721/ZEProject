@@ -38,7 +38,7 @@ function getHTMLFile(fileName) {
 const verifyInternal = (req, res, next) => {
     let value = req.get('X-Internal-Endpoint');
     if(!value)
-        return res.status(403).json({ error: "Request refused." });
+        return res.status(403).json({ message: "Request refused." });
     next();
 };
 
@@ -46,27 +46,11 @@ const verifyInternal = (req, res, next) => {
 
 // Home/Product Listing Page
 app.get('/', (req, res) => {
-    let cookies;
-    try {
-        cookies = req.headers.cookie.split(';');
-    } catch(err) {
-        res.sendFile(getHTMLFile('buyer/index.html'));
-        return;
-    }
-    let userID = -1;
-    for(let cookie of cookies) {
-        cookie = cookie.trim();
-        if(cookie.startsWith("userID")) {
-            let val = cookie.substring("userID=".length);
-            userID = parseInt(val);
-            break;
-        }
-        continue;
-    }
+    let userID = extractUserID(req);
     sqlConnection.query('SELECT userType FROM users WHERE id = ?', [userID], (error, results) => {
         if(error) {
             console.error(`Failed to retrieve userType for User ID ${userID}\n`, error);
-            return res.status(500).json({ error: "Internal Error" });
+            return res.status(500).json({ message: "Internal Error" });
         }
         data = results[0];
         if(data.userType === 'seller') {
@@ -80,68 +64,203 @@ app.get('/', (req, res) => {
 
 // Login Page
 app.get('/auth', (req, res) => {
-    let cookies;
-    try {
-        cookies = req.headers.cookie.split(';');
-    } catch(err) {
-        res.sendFile(getHTMLFile('auth.html'));
-        return;
-    }
-    let userID = -1;
-    for(let cookie of cookies) {
-        cookie = cookie.trim();
-        if(cookie.startsWith("userID")) {
-            let val = cookie.substring("userID=".length);
-            userID = parseInt(val);
-            if(userID !== -1) {
-                res.redirect('/');
-                return;
-            }
-            break;
+    let userID = extractUserID(req);
+    if(userID === -1)
+        return res.redirect('/');
+    else
+        return res.sendFile(getHTMLFile('auth.html'));
+});
+
+// PAYMENTS ENDPOINTS
+
+// User interface endpoint
+app.get('/pay', (req, res) => {
+    return res.sendFile(getHTMLFile('buyer/pay.html'));
+});
+
+// Retrieve a payment data
+// Requires key: 'paymentID'
+app.get('/payments', (req, res) => {
+    let paymentID = req.body.paymentID;
+    sqlConnection.query('SELECT * FROM payments WHERE paymentID = ?', [paymentID], (error, results) => {
+        if(error) {
+            console.error(error);
+            return res.status(500).json({ message: "Failed to obtain payment details." });
         }
-        continue;
+        if(results.length === 0)
+            return res.status(404).json({ message: "This payment does not exist." });
+
+        return res.json(results);
+    });
+});
+
+// Create a payment (used at cart.js when user presses PAY, but not paid yet)
+// Returns a payment ID that should be passed to GET /payments
+app.post('/payments', verifyInternal, (req, res) => {
+    let userID = extractUserID(req);
+    let orderID = req.body.orderID;
+    let amount = req.body.amount;
+    if(userID === -1)
+        return res.status(401).json({ message: "You are not authorised." });
+
+    sqlConnection.query('INSERT INTO payments (orderID, amount) VALUES (?, ?)', [orderID, amount], (error, results) => {
+        if(error) {
+            console.error(error);
+            return res.status(500).json({ message: "Failed to complete payment" });
+        }
+        return res.json({ paymentID: results.insertId });
+    });
+});
+
+// Update a payment (after user pays with credit card, can update here using paymentID)
+// Accepted keys: `paymentStatus` or `paymentMethod`
+app.put('/payments/:id', verifyInternal, (req, res) => {
+    let paymentID = req.params.id;
+    let q = 'UPDATE payments SET ';
+    let params = [];
+    if('paymentStatus' in req.body) {
+        let paymentStatus = String(req.body.paymentStatus).toLowerCase();
+        let validStatuses = ['pending', 'completed', 'refunded'];
+        if(!validStatuses.includes(paymentStatus))
+            return res.status(500).json({ message: "You specified an invalid payment status." });
+        q += 'paymentStatus = ?, ';
+        params.push(paymentStatus);
     }
-    return res.sendFile(getHTMLFile('auth.html'));
+    if('paymentMethod' in req.body) {
+        q += 'paymentMethod = ?, ';
+        params.push(req.body.paymentMethod);
+    }
+
+    if(params.length === 0)
+        return res.status(400).json({ message: "Nothing to change." });
+    if(q.trim().endsWith(','))
+        q = q.trimEnd().slice(0, -1);
+
+    q += 'WHERE paymentID = ?';
+    params.push(paymentID);
+    sqlConnection.query(q, params, (error, results) => {
+        if(error) {
+            console.error(error);
+            return res.status(500).json({ message: "Failed to update payment" });
+        }
+        if(results.affectedRows === 0) {
+            res.status(404).json({ message: "The payment does not exist." });
+            return;
+        }
+        return res.json();
+    });
 });
 
 // ORDERS ENDPOINTS
 
-// Create an order (JSON keys accepted: orderID, buyerID, productID, quantity)
-// COMPOSITE PRIMARY KEY: orderID, productID
+// User interface endpoint
+app.get('/orders', (req, res) => {
+    return res.sendFile(getHTMLFile('buyer/orders.html'));
+});
+
+// Gets an order, will retrieve all products related to the order ID (array of objects).
+app.get('/orders/:id', verifyInternal, (req, res) => {
+    let orderID = req.params.id;
+    sqlConnection.query('SELECT * FROM orders WHERE orderID = ?', [orderID], (error, results) => {
+        if(error) {
+            console.error(error);
+            return res.status(500).json({ message: `Failed to retrieve order ID ${orderID}` });
+        }
+        if(results.length === 0) {
+            return res.status(404).json({ message: "This order does not exist." });
+        }
+        return res.json(results);
+    });
+});
+
+app.get('/order_id', verifyInternal, (req, res) => {
+    sqlConnection.query('SELECT IFNULL(MAX(orderID), 0) + 1 AS nextOrderID FROM orders', (error, results) => {
+        if(error) {
+            console.error(error);
+            return res.status(500).json({ message: "Failed to obtain next available order ID." });
+        }
+        return res.json({ id: parseInt(results[0].nextOrderID) });
+    });
+});
+
+// Create an order (JSON keys accepted: buyerID, productID, quantity)
+// COMPOSITE PRIMARY KEY: orderID (generated by /order_id), productID
 app.post('/orders', verifyInternal, (req, res) => {
+    let userID = extractUserID(req);
+    if(userID === -1) {
+        return res.status(500).json({ message: "You are not authorised." }); 
+    }
     let orderID = req.body.orderID;
     let buyerID = req.body.buyerID;
     let productID = req.body.productID;
     let quantity = req.body.quantity;
-    
+
+    sqlConnection.query("INSERT INTO orders (orderID, buyerID, productID, quantity) VALUES (?, ?, ?, ?)", [orderID, buyerID, productID, quantity], (error, results) => {
+        if(error) {
+            console.error(error);
+            return res.status(500).json({ message: "Failed to create the order." });
+        }
+        return res.json({ message: "Order successfully created.", orderID: orderID });
+    });
 });
 
-// Updates an order (JSON keys accepted: orderID, buyerID, productID, quantity, orderStatus, shipmentStatus)
+// Updates an order (JSON keys accepted: buyerID, quantity, orderStatus, shipmentStatus)
 // Updating requires orderID and productID because of composite primary key.
 app.put('/orders', verifyInternal, (req, res) => {
+    if(!('orderID' in req.body) || !('productID' in req.body)) 
+        return res.status(400).json({ message: "Missing key: orderID / productID" });
+    if(req.body.length === 0) 
+        return res.status(400).json({ message: "Nothing to change." });
+    let q = `UPDATE orders SET `;
     let orderID = req.body.orderID;
     let productID = req.body.productID;
+    let params = [];
+    if('buyerID' in req.body) {
+        q += `buyerID = ?, `;
+        params.push(req.body.buyerID);
+    }
+    if('quantity' in req.body) {
+        q += `quantity = ?, `;
+        params.push(req.body.quantity);
+    }
+    if('orderStatus' in req.body) {
+        q += `orderStatus = ?, `;
+        params.push(req.body.orderStatus);
+    }
+    if('shipmentStatus' in req.body) {
+        q += `shipmentStatus = ?, `;
+        params.push(req.body.shipmentStatus);
+    }
+
+    if(params.length === 0)
+        return res.status(400).json({ message: "Nothing to change." });
+    if(q.trim().endsWith(','))
+        q = q.trimEnd().slice(0, -1);
+
+    q += `WHERE orderID = ? AND productID = ?`;
+    params.push(orderID);
+    params.push(productID);
+    sqlConnection.query(q, params, (error, results) => {
+        if(error) {
+            console.error(`Failed to update order info for order ID ${orderID} and productID ${productID}.\n`, error);
+            res.status(500).json({ message: "Internal Server Error" });
+            return;
+        }
+        if(results.affectedRows === 0) {
+            res.status(404).json({ message: "The order does not exist." });
+            return;
+        }
+        return res.json();
+    });
 });
 
 // CART ENDPOINTS
 
-// Loads cart cookies and renders page
+// Loads cart from database and renders page
 app.get('/cart', (req, res) => {
-    let cookies;
-    try {
-        cookies = req.headers.cookie.split(';');
-    } catch(error) {
+    let userID = extractUserID(req);
+    if(userID === -1) {
         return res.redirect('/');
-    }
-    let userID = -1;
-    for(let cookie of cookies) {
-        cookie = cookie.trim();
-        if(cookie.startsWith("userID")) {
-            let val = cookie.substring("userID=".length);
-            userID = parseInt(val);
-            break;
-        }
-        continue;
     }
     if(req.get('X-Internal-Endpoint')) {
         if(req.get('X-Return-Price-Only')) {
@@ -228,22 +347,7 @@ app.post('/cart', verifyInternal, (req, res) => {
         return res.status(400).json({ message: "Missing 'id' field for product ID" });
     }
     let productId = req.body.id;
-    let cookies;
-    try {
-        cookies = req.headers.cookie.split(';');
-    } catch(error) {
-        return res.status(401).json({ message: "No User ID cookie found. Not authorised. "});
-    }
-    let userID = -1;
-    for(let cookie of cookies) {
-        cookie = cookie.trim();
-        if(cookie.startsWith("userID")) {
-            let val = cookie.substring("userID=".length);
-            userID = parseInt(val);
-            break;
-        }
-        continue;
-    }
+    let userID = extractUserID(req);
     if(userID === -1)
         return res.status(401).json({ message: "You are not authorised. "});
 
@@ -301,22 +405,7 @@ app.post('/cart', verifyInternal, (req, res) => {
 app.put('/cart', verifyInternal, (req, res) => {
     let productId = req.body.id;
     let amount = parseInt(req.body.amount);
-    let cookies;
-    try {
-        cookies = req.headers.cookie.split(';');
-    } catch(error) {
-        return res.status(401).json({ message: "No User ID cookie found. Not authorised. "});
-    }
-    let userID = -1;
-    for(let cookie of cookies) {
-        cookie = cookie.trim();
-        if(cookie.startsWith("userID")) {
-            let val = cookie.substring("userID=".length);
-            userID = parseInt(val);
-            break;
-        }
-        continue;
-    }
+    let userID = extractUserID(req);
     if(userID === -1)
         return res.status(401).json({ message: "You are not authorised. "});
     let productStock;
@@ -339,7 +428,7 @@ app.put('/cart', verifyInternal, (req, res) => {
             cart = JSON.parse(results[0].cart);
         }
         let limitReached = false;
-        if(amount >= productStock) {
+        if(amount > productStock) {
             cart[productId] = productStock;
             limitReached = true;
         } else {
@@ -359,22 +448,7 @@ app.put('/cart', verifyInternal, (req, res) => {
 
 // Deletes from cart (supply query parameters ?id=&quantity=, or special header for ALL)
 app.delete('/cart', verifyInternal, (req, res) => {
-    let cookies;
-    try {
-        cookies = req.headers.cookie.split(';');
-    } catch(error) {
-        return res.status(401).json({ message: "No User ID cookie found. Not authorised. "});
-    }
-    let userID = -1;
-    for(let cookie of cookies) {
-        cookie = cookie.trim();
-        if(cookie.startsWith("userID")) {
-            let val = cookie.substring("userID=".length);
-            userID = parseInt(val);
-            break;
-        }
-        continue;
-    }
+    let userID = extractUserID(req);
     if(userID === -1)
         return res.status(401).json({ message: "You are not authorised. "});
     if(req.get('X-Wipe-Cart')) {
@@ -449,7 +523,7 @@ app.put('/products/:id', verifyInternal, (req, res) => {
     }
 
     if(params.length === 0)
-        return res.status(400).json({ error: "Nothing to change." });
+        return res.status(400).json({ message: "Nothing to change." });
     if(q.trim().endsWith(','))
         q = q.trimEnd().slice(0, -1);
 
@@ -458,10 +532,10 @@ app.put('/products/:id', verifyInternal, (req, res) => {
     sqlConnection.query(q, params, (error, results) => {
         if(error) {
             console.error("Failed to update product\n", error);
-            return res.status(500).json({ error: "Internal Server Error" });
+            return res.status(500).json({ message: "Internal Server Error" });
         }
         if(results.affectedRows === 0)
-            return res.status(404).json({ error: "The product does not exist."});
+            return res.status(404).json({ message: "The product does not exist."});
         return res.json();
     });
 });
@@ -479,7 +553,7 @@ app.post('/products', verifyInternal, (req, res) => {
     sqlConnection.query('INSERT INTO products (sellerID, productName, productDescription, price, quantity) VALUES (?, ?, ?, ?, ?)', [sellerId, productName, productDescription, price, quantity], (error, results) => {
         if(error) {
             console.error("Failed to create a product.\n", error);
-            return res.status(500).json({ error: "Internal Server Error" });
+            return res.status(500).json({ message: "Internal Server Error" });
         }
         return res.json({ id: results.insertId });
     });
@@ -491,7 +565,7 @@ app.get('/products/:id', verifyInternal, (req, res) => {
         sqlConnection.query('SELECT * FROM products', (error, results) => {
             if(error) {
                 console.error("Failed to retrieve all products\n", error);
-                return res.status(500).json({ error: "Internal Server Error" });
+                return res.status(500).json({ message: "Internal Server Error" });
             }
             return res.json(results);
         });
@@ -500,14 +574,14 @@ app.get('/products/:id', verifyInternal, (req, res) => {
         sqlConnection.query('SELECT * FROM products WHERE productId = ?', [productId], (error, results) => {
             if(error) {
                 console.error("Failed to retrieve all products\n", error);
-                return res.status(500).json({ error: "Internal Server Error" });
+                return res.status(500).json({ message: "Internal Server Error" });
             }
             if(results.length === 0)
-                return res.status(404).json({ error: "Product does not exist." });
+                return res.status(404).json({ message: "Product does not exist." });
             return res.json(results);
         });
     } else
-        return res.status(400).json({ error: "Product ID must be numeric." });
+        return res.status(400).json({ message: "Product ID must be numeric." });
 });
 
 // USERS TABLE ENDPOINTS
@@ -599,7 +673,7 @@ app.get('/users/:id', verifyInternal, (req, res) => {
     sqlConnection.query('SELECT * FROM users WHERE id = ?', [userId], (error, results) => {
         if(error) {
             console.error(`Unable to retrieve user info for User ID ${userId}\n`, error);
-            return res.status(500).json({ error: "Internal Server Error" });
+            return res.status(500).json({ message: "Internal Server Error" });
         }
         return res.json(results);
     });
@@ -611,7 +685,7 @@ app.delete('/users/:id', verifyInternal, (req, res) => {
     sqlConnection.query('DELETE FROM users WHERE id = ?', [userId], (error, results) => {
         if(error) {
             console.error(`Failed to delete User with ID ${userId}\n`, error);
-            return res.status(500).json({ error: "Internal Server Error" });
+            return res.status(500).json({ message: "Internal Server Error" });
         }
         return res.json();
     });
@@ -622,7 +696,7 @@ app.delete('/users/:id', verifyInternal, (req, res) => {
 app.put('/users/:id', verifyInternal, (req, res) => {
     let userId = req.params.id;
     if(req.body.length === 0) 
-        return res.status(400).json({ error: "Nothing to change." });
+        return res.status(400).json({ message: "Nothing to change." });
     let q = `UPDATE users SET `;
     let params = [];
     if('username' in req.body) {
@@ -652,7 +726,7 @@ app.put('/users/:id', verifyInternal, (req, res) => {
     }
 
     if(params.length === 0)
-        return res.status(400).json({ error: "Nothing to change." });
+        return res.status(400).json({ message: "Nothing to change." });
     if(q.trim().endsWith(','))
         q = q.trimEnd().slice(0, -1);
 
@@ -661,16 +735,36 @@ app.put('/users/:id', verifyInternal, (req, res) => {
     sqlConnection.query(q, params, (error, results) => {
         if(error) {
             console.error(`Failed to update user info for user ID ${userId}\n`, error);
-            res.status(500).json({ error: "Internal Server Error" });
+            res.status(500).json({ message: "Internal Server Error" });
             return;
         }
         if(results.affectedRows === 0) {
-            res.status(404).json({ error: "The user does not exist." });
+            res.status(404).json({ message: "The user does not exist." });
             return;
         }
         return res.json();
     });
 });
+
+function extractUserID(req) {
+    let cookies;
+    let userID = -1;
+    try {
+        cookies = req.headers.cookie.split(';');
+    } catch(error) {
+        return userID;
+    }
+    for(let cookie of cookies) {
+        cookie = cookie.trim();
+        if(cookie.startsWith("userID")) {
+            let val = cookie.substring("userID=".length);
+            userID = parseInt(val);
+            break;
+        }
+        continue;
+    }
+    return userID;
+}
 
 // Main Code
 

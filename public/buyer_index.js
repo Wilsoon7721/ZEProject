@@ -63,7 +63,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 let addToCartButton = productDiv.querySelector('.add-to-cart-button');
                 let originalStock = parseInt(stockAvailableElement.textContent.split(" ")[0]);
                 let stockRemaining = originalStock - cartQuantity;
-                console.log(stockRemaining);
                 if(stockRemaining <= 0) {
                     stockAvailableElement.textContent = `0 available ◦ In your cart`;
                     addToCartButton.classList.add('disabled');
@@ -207,7 +206,8 @@ function renderProductInfo(productId, title, description, price, stockCount, sel
     });
 
     viewDescriptionButton.addEventListener('click', () => {
-        // Trigger Modal
+        let productId = parseInt(viewDescriptionButton.parentNode.getAttribute('product-reference-id'));
+        showProductDescriptionModal(productId);
     });
 
     innerButtonColDiv.appendChild(addToCartButton);
@@ -247,4 +247,49 @@ function showToast(toastTitle, toastContent, toastImage) {
     toastElement.removeEventListener('hidden.bs.toast', hideToastBox);
     toastElement.addEventListener('hidden.bs.toast', hideToastBox);
 
+}
+
+function showProductDescriptionModal(productId) {
+    let modalElement = document.getElementById('descriptionModal');
+    let modalTitle = document.getElementById('description-modal-title');
+    let modalDescription = document.getElementById('description-modal-body');
+    let modalStockPriceTag = document.getElementById('stock-count-price-tag');
+
+    let bsModal = bootstrap.Modal.getInstance(modalElement);
+    if(!bsModal)
+        bsModal = new bootstrap.Modal(modalElement);
+    // Fetch product, populate and show
+    fetch(`/products/${productId}`, {
+        method: 'GET',
+        headers: {
+            'X-Internal-Endpoint': 'true'
+        }
+    })
+    .then(async resp => {
+        if(!resp.ok) {
+            showToast("Failed to fetch", "The information for this product could not be retrieved.", "images/cross.jpg");
+            return;
+        }
+        let data = (await resp.json())[0];
+        modalTitle.textContent = data.productName;
+        modalDescription.textContent = data.productDescription;
+        fetch('/cart', {
+            method: 'GET',
+            headers: {
+                'X-Internal-Endpoint': 'true'
+            }
+        })
+        .then(async resp => {
+            let cart = await resp.json();
+            // productId is a string because its obtained from `product-reference-id` attribute
+            if(productId in cart) {
+                let qtyInCart = parseInt(cart[productId]);
+                let totalStock = parseInt(data.quantity);
+                modalStockPriceTag.textContent = `${(totalStock - qtyInCart)} available ◦ ${qtyInCart} in cart ◦ $${data.price}/ea`
+            } else {
+                modalStockPriceTag.textContent = `${data.quantity} available ◦ $${data.price}/ea`;
+            }
+            bsModal.show();
+        });
+    });
 }
