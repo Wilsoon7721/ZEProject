@@ -52,6 +52,7 @@ CREATE TABLE `orders` (
 
 LOCK TABLES `orders` WRITE;
 /*!40000 ALTER TABLE `orders` DISABLE KEYS */;
+INSERT INTO `orders` VALUES (1,1,1,2,'pending','2024-05-29 04:22:51','pending'),(1,1,2,5,'pending','2024-05-29 04:22:51','pending'),(2,1,1,2,'pending','2024-05-29 04:22:51','pending');
 /*!40000 ALTER TABLE `orders` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -65,7 +66,7 @@ DROP TABLE IF EXISTS `payments`;
 CREATE TABLE `payments` (
   `paymentID` int NOT NULL AUTO_INCREMENT,
   `orderID` int NOT NULL,
-  `Amount` decimal(10,2) NOT NULL,
+  `amount` decimal(10,2) NOT NULL,
   `paymentStatus` enum('pending','completed','refunded') DEFAULT 'pending',
   `paymentMethod` varchar(15) DEFAULT NULL,
   `createdAt` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
@@ -144,7 +145,7 @@ CREATE TABLE `users` (
 
 LOCK TABLES `users` WRITE;
 /*!40000 ALTER TABLE `users` DISABLE KEYS */;
-INSERT INTO `users` VALUES (1,'testbuyer001','testbuyer@shopeasy.com','test','Test Buyer 001',NULL,NULL,'{\"1\":5,\"2\":4}','buyer','2024-05-23 13:37:42'),(2,'testseller001','testseller@shopeasy.com','test','Test Seller 001',NULL,NULL,NULL,'seller','2024-05-23 13:37:42');
+INSERT INTO `users` VALUES (1,'testbuyer001','testbuyer@shopeasy.com','test','Test Buyer 001',NULL,NULL,'{\"2\":8}','buyer','2024-05-23 13:37:42'),(2,'testseller001','testseller@shopeasy.com','test','Test Seller 001',NULL,NULL,NULL,'seller','2024-05-23 13:37:42');
 /*!40000 ALTER TABLE `users` ENABLE KEYS */;
 UNLOCK TABLES;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
@@ -157,4 +158,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2024-05-28 17:45:03
+-- Dump completed on 2024-05-29 17:46:06
