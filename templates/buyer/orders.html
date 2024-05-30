@@ -30,8 +30,36 @@
     <h3 id="page-title" class="text-center">My Orders</h3>
     <div id="auto-margin" style="margin-bottom: 3%;"></div>
     <!-- Content -->
-
-
+    <div id="order-card-holder" class="row row-cols-1 row-cols-md-3 g-4">
+        <div class="col">
+            <div class="card">
+                <div class="card-header">
+                    <p style="margin: 0">Status: Shipped</p>
+                    <p style="margin: 0">Shipment Status: In Transit</p>
+                </div>
+                <div class="card-body">
+                    <h5 class="card-title">Product Title</h5>
+                    <p class="card-text" style="font-size: 16px;">Purchased {quantity} at {unit price}/ea</p>
+                    <hr>
+                    <p class="card-text" style="font-size: 16px;">Total Price: </p>
+                </div>
+                <div class="card-footer" order-reference-id="0">
+                    <button class="btn btn-success">Order Received</button>
+                    <button class="btn btn-danger">Request for Return/Refund</button>
+                </div>
+            </div>
+        </div>
+        <div class="col">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Special title treatment</h5>
+                    <p class="card-text">With supporting text below as a natural lead-in to additional content.</p>
+                    <a href="#" class="btn btn-primary">Go somewhere</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="orders.js"></script>
     <script src="injector.js"></script>
 </body>
 </html>

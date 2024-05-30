@@ -52,7 +52,6 @@ CREATE TABLE `orders` (
 
 LOCK TABLES `orders` WRITE;
 /*!40000 ALTER TABLE `orders` DISABLE KEYS */;
-INSERT INTO `orders` VALUES (1,1,1,2,'pending','2024-05-29 04:22:51','pending'),(1,1,2,5,'pending','2024-05-29 04:22:51','pending'),(2,1,1,2,'pending','2024-05-29 04:22:51','pending');
 /*!40000 ALTER TABLE `orders` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -73,7 +72,7 @@ CREATE TABLE `payments` (
   PRIMARY KEY (`paymentID`),
   KEY `orderID` (`orderID`),
   CONSTRAINT `payments_ibfk_1` FOREIGN KEY (`orderID`) REFERENCES `orders` (`orderID`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -145,7 +144,7 @@ CREATE TABLE `users` (
 
 LOCK TABLES `users` WRITE;
 /*!40000 ALTER TABLE `users` DISABLE KEYS */;
-INSERT INTO `users` VALUES (1,'testbuyer001','testbuyer@shopeasy.com','test','Test Buyer 001',NULL,NULL,'{\"2\":8}','buyer','2024-05-23 13:37:42'),(2,'testseller001','testseller@shopeasy.com','test','Test Seller 001',NULL,NULL,NULL,'seller','2024-05-23 13:37:42');
+INSERT INTO `users` VALUES (1,'testbuyer001','testbuyer@shopeasy.com','test','Test Buyer 001',NULL,NULL,NULL,'buyer','2024-05-23 13:37:42'),(2,'testseller001','testseller@shopeasy.com','test','Test Seller 001',NULL,NULL,NULL,'seller','2024-05-23 13:37:42');
 /*!40000 ALTER TABLE `users` ENABLE KEYS */;
 UNLOCK TABLES;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
@@ -158,4 +157,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2024-05-29 17:46:06
+-- Dump completed on 2024-05-30 17:52:56

@@ -59,7 +59,7 @@ document.addEventListener('DOMContentLoaded', () => {
             })
             .then(resp => {
                 if(!resp.ok) {
-                    console.error("Failed to wipe user's cart.");
+                    console.error("Failed to delete user's cart.");
                     return;
                 }
             });
