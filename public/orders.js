@@ -53,13 +53,29 @@ function renderUserOrder(orderID, productTitle, purchaseQuantity, unitPrice, ord
     cardFooter.classList.add('card-footer');
     cardFooter.setAttribute('order-reference-id', orderID); // For event delegation later
 
+    let receivedButton = document.createElement('button');
+    let refundButton = document.createElement('button');
+    receivedButton.classList.add('btn', 'btn-success');
+    refundButton.classList.add('btn', 'btn-danger');
+    receivedButton.innerText = "Order Received";
+    refundButton.innerText = "Request for Return/Refund";
+
     // TODO Dynamic buttons
     if(sanitizedOrderStatus === 'pending') {
         // Cancel Button
+        let cancelButton = document.createElement('button');
+        cancelButton.innerText = "Cancel Order";
+        cancelButton.classList.add('btn', 'btn-danger');
+        cardFooter.appendChild(cancelButton);
     } else if(sanitizedOrderStatus === 'shipped') {
         // Order Received and Disabled Request for Return/Refund
+        refundButton.setAttribute('disabled', 'true');
+        cardFooter.appendChild(receivedButton);
+        cardFooter.appendChild(refundButton);
     } else if(sanitizedOrderStatus === 'delivered') {
         // Order Received and Request for Return/Refund
+        cardFooter.appendChild(receivedButton);
+        cardFooter.appendChild(refundButton);
     } else {
         // No buttons (for cancelled)
     }
