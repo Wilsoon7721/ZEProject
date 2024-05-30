@@ -13,11 +13,16 @@
             <br />
             <form id="payment-type-form">
                 <div class="payment-type">
-                    <input type="radio" checked name="payment-type" id="payment-type" value="creditcard">
+                    <input type="radio" checked name="payment-type" id="payment-type" value="Credit Card">
                     <img src="images/creditcard.jpg" class="payment-type-img">
                     <p class="payment-type-name">Credit Card</p>
                 </div>
-                <input type="submit" value="Pay ${Amount}">
+                <div class="payment-type">
+                    <input type="radio" name="payment-type" id="payment-type" value="PayNow">
+                    <img src="images/paynow.png" class="payment-type-img">
+                    <p class="payment-type-name">PayNow</p>
+                </div>
+                <input type="submit" id="submit-button" value="Pay">
             </form>
         </div>
     </div>

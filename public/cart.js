@@ -1,5 +1,3 @@
-const e = require("express");
-
 document.addEventListener('DOMContentLoaded', () => {
     // Obtain user cookie
     let cartItemHolder = document.getElementById('cart-items-holding-container');
@@ -107,21 +105,87 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 // Fetch order_id first to retrieve next Order ID
                 // Fetch cart  to retrieve productIDs and quantities
-                // Then post to orders to obtain orderID
+                // Then post each product and quantity to orders
                 // Then post to payments to obtain paymentID
                 // Kickoff by sending paymentID to /pay.
-
-                let orderID;
-                getNextOrderID().then(id => orderID = id);
-                fetch('/cart', {
+                fetch('/order_id', {
                     method: 'GET',
-                    headers: commonHeaders
-                })
-                .then(async resp => {
-                    let cart = await resp.json();
-                    
+                    headers: {
+                        'X-Internal-Endpoint': 'true'
+                    }
+                }).then(async resp => {
+                    if(!resp.ok) {
+                        console.error(`Failed to obtain the next order ID: HTTP response code ${resp.status()} received.`);
+                        return;
+                    }
+                    let data = await resp.json();
+                    let orderID = parseInt(data.id);
+                    if(orderID === 0) {
+                        showToast("Action Failed", "The order was not created, missing order ID.", 'images/cross.jpg');
+                        return;
+                    }
+                    fetch('/cart', {
+                        method: 'GET',
+                        headers: commonHeaders
+                    })
+                    .then(async resp => {
+                        let cart = await resp.json();
+                        for(let productId in cart) {
+                            // `productId` originally comes out as a String because JSON requires left-side to be a String.
+                            // As such, we force it into an integer using parseInt()
+                            await fetch('/orders', {
+                                method: 'POST',
+                                headers: commonHeaders,
+                                body: JSON.stringify({
+                                    orderID: orderID,
+                                    buyerID: userID,
+                                    productID: parseInt(productId),
+                                    quantity: parseInt(cart[productId])
+                                })
+                            }).then(resp => {
+                                if(!resp.ok) {
+                                    showToast("Action Failed", "An item could not be processed.", 'images/cross.jpg');
+                                    return;
+                                }
+                            });
+                        }
+    
+                        // After all the products are in the orders table, we re-fetch cart with `X-Return-Price-Only` to reobtain the latest price.
+                        fetch('/cart', {
+                            method: 'GET',
+                            headers: {
+                                'X-Internal-Endpoint': 'true',
+                                'X-Return-Price-Only': 'true'
+                            }
+                        })
+                        .then(async resp => {
+                            if(!resp.ok) {
+                                console.error("Failed to retrieve total price.");
+                                return;
+                            }
+                            let data = await resp.json();
+                            let totalPrice = parseFloat(data.price)
+                            // After all the products are in the orders table, we POST to /payments with the amount.
+                            fetch('/payments', {
+                                method: 'POST',
+                                headers: commonHeaders,
+                                body: JSON.stringify({
+                                    orderID: orderID,
+                                    amount: totalPrice
+                                })
+                            })
+                            .then(async resp => {
+                                if(!resp.ok) {
+                                    showToast("Action Failed", "Failed to start payment process", 'images/cross.jpg');
+                                    return;
+                                }
+                                let data = await resp.json();
+                                window.location.href = `/pay?id=${data.paymentID}`;
+                            })
+                        });
+                    });
                 });
-            });
+            });    
             buttonDiv.appendChild(disposeAllButton);
             buttonDiv.appendChild(payButton);
             itemContainer.appendChild(totalDiv);
@@ -130,23 +194,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 500);
     });
 });
-
-async function getNextOrderID() {
-    try {
-        let resp = await fetch('/order_id', {
-            method: 'GET',
-            headers: commonHeaders
-        });    
-        if(!resp.ok) {
-            console.error(`Failed to obtain the next order ID: HTTP response code ${resp.status()} received.`);
-            return;
-        }
-        let data = await resp.json();
-        return data.id;
-    } catch(error) {
-        console.error("Failed to obtain the next order ID.\n", error);
-    }
-}
 
 const ITEM_TITLE_MAX_CHARS = 16;
 function renderCartItem(productId, purchaseQuantity) {

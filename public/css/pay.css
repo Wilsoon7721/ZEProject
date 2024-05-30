@@ -17,6 +17,7 @@
 .payment-type {
     display: flex; 
     align-items: center;
+
 }
 
 .payment-type-img {
@@ -43,10 +44,16 @@ input[type="submit"] {
     margin-top: 20px;
     margin-bottom: 20px;
     width: 100%;
-    border-radius: 20px;
+    border-radius: 25px;
     box-shadow: 0px 0px 5px 0px rgba(0, 0, 0, 0.2);
 }
 
 input[type="submit"]:hover {
     background-color: #368e63;
+}
+
+input[type="submit"]:disabled {
+    background-color: #A5D6A7;
+    cursor: not-allowed;
+    color: #fff;
 }
