@@ -3,6 +3,11 @@ document.addEventListener('DOMContentLoaded', () => {
     let submitButton = document.getElementById('submit-button');
     let params = new URLSearchParams(window.location.search);   
     let paymentID = params.get('id');
+    let redirected = params.get('redirect');
+    if(redirected === 'true') {
+        let messageBox = document.getElementById('orders-redirect-message');
+        messageBox.removeAttribute('hidden');
+    }
     if(!paymentID) {
         window.location.href = '/';
     }

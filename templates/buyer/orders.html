@@ -6,6 +6,19 @@
     <title>My Orders</title>
 </head>
 <body>
+    <!-- Toast -->
+    <div id="toast-surrounding-container" style="display: none;" aria-live="polite" aria-atomic="true" class="position-relative">
+        <div class="toast-fixed position-fixed top-0 end-0 mt-3 me-3 p-3" style="z-index: 1050;">
+        <div class="toast" role="alert" aria-live="assertive" aria-atomic="true" data-bs-autohide="true" data-bs-delay="3500">
+            <div class="toast-header">
+                <img id="orders-toast-image" style="width: 1.25rem; height: 1.25rem;" class="rounded me-2">
+                <strong id="orders-toast-title" class="me-auto"></strong>
+                <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+            <div id="orders-toast-message" class="toast-body"></div>
+        </div>
+        </div>
+    </div>
     <nav class="navbar fixed-top navbar-expand-lg navbar-light bg-light">
         <div class="container-fluid d-flex justify-content-start">
              <a class="navbar-brand mb-0 h1" href="/">ShopEasy</a>
@@ -29,35 +42,8 @@
     </nav>
     <h3 id="page-title" class="text-center">My Orders</h3>
     <div id="auto-margin" style="margin-bottom: 3%;"></div>
-    <!-- Content -->
     <div id="order-card-holder" class="row row-cols-1 row-cols-md-3 g-4">
-        <div class="col">
-            <div class="card">
-                <div class="card-header">
-                    <p style="margin: 0">Status: Shipped</p>
-                    <p style="margin: 0">Shipment Status: In Transit</p>
-                </div>
-                <div class="card-body">
-                    <h5 class="card-title">Product Title</h5>
-                    <p class="card-text" style="font-size: 16px;">Purchased {quantity} at {unit price}/ea</p>
-                    <hr>
-                    <p class="card-text" style="font-size: 16px;">Total Price: </p>
-                </div>
-                <div class="card-footer" order-reference-id="0">
-                    <button class="btn btn-success">Order Received</button>
-                    <button class="btn btn-danger">Request for Return/Refund</button>
-                </div>
-            </div>
-        </div>
-        <div class="col">
-            <div class="card">
-                <div class="card-body">
-                    <h5 class="card-title">Special title treatment</h5>
-                    <p class="card-text">With supporting text below as a natural lead-in to additional content.</p>
-                    <a href="#" class="btn btn-primary">Go somewhere</a>
-                </div>
-            </div>
-        </div>
+        <!-- Orders Populated by JS here -->
     </div>
     <script src="orders.js"></script>
     <script src="injector.js"></script>

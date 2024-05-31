@@ -78,13 +78,18 @@ app.get('/pay', (req, res) => {
     return res.sendFile(getHTMLFile('buyer/pay.html'));
 });
 
-// Retrieve a payment data
+// Queries Database by Payment ID
 // Requires key: 'paymentID'
-app.get('/payments', (req, res) => {
-    let paymentID = req.get('X-Payment-ID');
-    if(!(paymentID))
-        return res.status(400).json({ message: "Missing payment ID" });
-    sqlConnection.query('SELECT * FROM payments WHERE paymentID = ?', [paymentID], (error, results) => {
+app.get('/payments', verifyInternal, (req, res) => {
+    let id = req.get('X-Payment-ID') || req.get('X-Order-ID');
+    if(!id)
+        return res.status(400).json({ message: "Missing payment/order ID" });
+    let query;
+    if(req.get('X-Payment-ID'))
+        query = 'paymentID = ?';
+    else 
+        query = 'orderID = ?'
+    sqlConnection.query(`SELECT * FROM payments WHERE ${query}`, [id], (error, results) => {
         if(error) {
             console.error(error);
             return res.status(500).json({ message: "Failed to obtain payment details." });
@@ -160,13 +165,13 @@ app.get('/orders', (req, res) => {
     return res.sendFile(getHTMLFile('buyer/orders.html'));
 });
 
-// Gets an order, will retrieve all products related to the order ID (array of objects).
+// Gets an order, will retrieve all products related to the buyer ID (array of objects).
 app.get('/orders/:id', verifyInternal, (req, res) => {
-    let orderID = req.params.id;
-    sqlConnection.query('SELECT * FROM orders WHERE orderID = ?', [orderID], (error, results) => {
+    let buyerID = req.params.id;
+    sqlConnection.query('SELECT * FROM orders WHERE buyerID = ?', [buyerID], (error, results) => {
         if(error) {
             console.error(error);
-            return res.status(500).json({ message: `Failed to retrieve order ID ${orderID}` });
+            return res.status(500).json({ message: `Failed to retrieve orders by buyer ID ${orderID}` });
         }
         if(results.length === 0) {
             return res.status(404).json({ message: "This order does not exist." });
