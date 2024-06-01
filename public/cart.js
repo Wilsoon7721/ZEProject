@@ -278,24 +278,72 @@ function renderCartItem(productId, purchaseQuantity) {
                     delButton.click();
                     return;
                 }
-                fetch('/cart', {
-                    method: 'PUT',
+
+                // This fetch will get the orders, and obtain the usedQuantity similar to the home page
+                let usedQuantity = 0;
+                fetch('/custom_query', {
+                    method: 'GET',
                     headers: {
-                        'Content-Type': 'application/json',
-                        'X-Internal-Endpoint': 'true'
-                    },
-                    body: JSON.stringify({
-                        id: productId,
-                        amount: newValue
-                    })
+                        'X-Internal-Endpoint': 'true',
+                        'X-SQL-Query': `SELECT * FROM orders WHERE productID = ${productId}`
+                    }
                 })
                 .then(async resp => {
-                    let refreshPage = window.location.href;
-                    if(resp.status === 409)
-                        showToast('Maximum Quantity Reached', 'You have exceeded the maximum amount purchasable. Quantity has been set to maximum available.', 'images/cross.jpg');
-                    else
-                        showToast('Cart Quantity Changed', 'You have changed the quantity of a product.', null);
-                    setTimeout(() => window.location.href = refreshPage, 1500);
+                    if(!resp.ok) {
+                        console.error("Render Product Failed! Could not obtain existing orders with the product ID.");
+                        return;
+                    }
+                    let results = await resp.json();
+                    if(results.length !== 0) {
+                        for(let result of results) {
+                            let orderStatus = result.orderStatus;
+                            let orderQuantity = parseInt(result.quantity);
+                            if(orderStatus === 'pending' || orderStatus === 'shipped')
+                                usedQuantity += orderQuantity
+                        } 
+                    }
+                    fetch(`/products/${productId}`, {
+                        method: 'GET',
+                        headers: {
+                            'X-Internal-Endpoint': 'true'
+                        }
+                    })
+                    .then(async resp => {
+                        if(!resp.ok) {
+                            console.error("Render Product Failed! Could not obtain current information about the product in the cart.");
+                            return;
+                        }
+
+                        let data = (await resp.json())[0];
+                        let totalQuantity = parseInt(data.quantity);
+                        let availableQuantity = (totalQuantity - usedQuantity);
+                        if(newValue >= availableQuantity) {
+                            showToast('Maximum Quantity Reached', 'You have exceeded the maximum amount purchasable. Quantity has been set to maximum available.', 'images/cross.jpg');
+                            qtyInputField.value = availableQuantity;
+                            return;
+                        }
+
+                        // Before newValue is passed to PUT, it should be lower than (total stock - used quantity)
+                        fetch('/cart', {
+                            method: 'PUT',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-Internal-Endpoint': 'true'
+                            },
+                            body: JSON.stringify({
+                                id: productId,
+                                amount: newValue
+                            })
+                        })
+                        .then(async resp => {
+                            let refreshPage = window.location.href;
+                            if(resp.status === 409)
+                                showToast('Maximum Quantity Reached', 'You have exceeded the maximum amount purchasable. Quantity has been set to maximum available.', 'images/cross.jpg');
+                            else
+                                showToast('Cart Quantity Changed', 'You have changed the quantity of a product.', null);
+                            setTimeout(() => window.location.href = refreshPage, 1500);
+                        });
+                    });
                 });
                 return;
             }

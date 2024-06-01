@@ -44,6 +44,20 @@ const verifyInternal = (req, res, next) => {
 
 // Routes
 
+// Generic Query Endpoint
+app.get('/custom_query', verifyInternal, (req, res) => {
+    let sqlQuery = req.get('X-SQL-Query');
+    if(!sqlQuery)
+        return res.status(500).json({ message: "Missing query" });
+    sqlConnection.query(sqlQuery, (error, results) => {
+        if(error) {
+            console.error("Custom Query Failed\n", error);
+            return res.status(500).json({ error: error });
+        }
+        return res.json(results);
+    });
+});
+
 // Home/Product Listing Page
 app.get('/', (req, res) => {
     let userID = extractUserID(req);
@@ -580,7 +594,7 @@ app.get('/products/:id', verifyInternal, (req, res) => {
         // Number
         sqlConnection.query('SELECT * FROM products WHERE productId = ?', [productId], (error, results) => {
             if(error) {
-                console.error("Failed to retrieve all products\n", error);
+                console.error("Failed to retrieve the product\n", error);
                 return res.status(500).json({ message: "Internal Server Error" });
             }
             if(results.length === 0)

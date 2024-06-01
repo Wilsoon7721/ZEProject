@@ -150,7 +150,8 @@ function renderUserOrder(orderID, productID, purchaseQuantity, orderStatus, ship
         refundButton.style.marginLeft = '10px';
         receivedButton.addEventListener('click', () => {
             let orderId = receivedButton.parentNode.getAttribute('order-reference-id');
-
+            // Other than setting order to received, also deduct the actual quantity of the product from the stock count in products table
+            
         });
         refundButton.addEventListener('click', () => {
             let orderId = refundButton.parentNode.getAttribute('order-reference-id');

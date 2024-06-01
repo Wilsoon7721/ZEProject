@@ -20,7 +20,7 @@ document.addEventListener("DOMContentLoaded", () => {
             let productName = results[i].productName;
             let productDescription = results[i].productDescription;
             let price = results[i].price;
-            let stockCount = results[i].quantity;
+            let stockCount = parseInt(results[i].quantity);
             let createdAt = results[i].createdAt;
             // Format createdAt
             let timestamp = new Date(createdAt);
@@ -40,7 +40,35 @@ document.addEventListener("DOMContentLoaded", () => {
                     return;
                 }
                 let sellerName = (await resp.json())[0].username;
-                renderProductInfo(productId, productName, productDescription, price, stockCount, sellerName, days);
+                fetch('/custom_query', {
+                    method: 'GET',
+                    headers: {
+                        'X-Internal-Endpoint': 'true',
+                        'X-SQL-Query': `SELECT * FROM orders WHERE productID = ${productId}`
+                    }
+                })
+                .then(async resp => {
+                    if(!resp.ok) {
+                        console.error("Render Product Failed! Could not obtain existing orders with the product ID.");
+                        return;
+                    }
+                    // Adjusts the stock count to account for orders that are PENDING or SHIPPED (deducts the stock count)
+                    // If the order is cancelled, the original quantity restores
+                    // If the order is delivered, the actual quantity should be reflected in the products table.
+                    let results = await resp.json();
+                    let usedQuantity = 0;
+                    let adjustedStock = stockCount
+                    if(results.length !== 0) {
+                        for(let result of results) {
+                            let orderStatus = result.orderStatus;
+                            let orderQuantity = parseInt(result.quantity);
+                            if(orderStatus === 'pending' || orderStatus === 'shipped')
+                                usedQuantity += orderQuantity
+                        }
+                        adjustedStock -= usedQuantity; 
+                    }
+                    renderProductInfo(productId, productName, productDescription, price, adjustedStock, sellerName, days);
+                });
             }); 
         }
     })
@@ -282,14 +310,38 @@ function showProductDescriptionModal(productId) {
         .then(async resp => {
             let cart = await resp.json();
             // productId is a string because its obtained from `product-reference-id` attribute
-            if(productId in cart) {
-                let qtyInCart = parseInt(cart[productId]);
+
+            let usedQuantity = 0;
+            fetch('/custom_query', {
+                method: 'GET',
+                headers: {
+                    'X-Internal-Endpoint': 'true',
+                    'X-SQL-Query': `SELECT * FROM orders WHERE productID = ${productId}`
+                }
+            })
+            .then(async resp => {
+                if(!resp.ok) {
+                    console.error("Render Product Failed! Could not obtain existing orders with the product ID.");
+                    return;
+                }
+                let results = await resp.json();
+                if(results.length !== 0) {
+                    for(let result of results) {
+                        let orderStatus = result.orderStatus;
+                        let orderQuantity = parseInt(result.quantity);
+                        if(orderStatus === 'pending' || orderStatus === 'shipped')
+                            usedQuantity += orderQuantity
+                    } 
+                }
                 let totalStock = parseInt(data.quantity);
-                modalStockPriceTag.textContent = `${(totalStock - qtyInCart)} available ◦ ${qtyInCart} in cart ◦ $${data.price}/ea`
-            } else {
-                modalStockPriceTag.textContent = `${data.quantity} available ◦ $${data.price}/ea`;
-            }
-            bsModal.show();
+                if(productId in cart) {
+                    let qtyInCart = parseInt(cart[productId]);
+                    modalStockPriceTag.textContent = `${(totalStock - qtyInCart - usedQuantity)} available ◦ ${qtyInCart} in cart ◦ $${data.price}/ea`
+                } else {
+                    modalStockPriceTag.textContent = `${totalStock - usedQuantity} available ◦ $${data.price}/ea`;
+                }
+                bsModal.show();
+            });
         });
     });
 }
