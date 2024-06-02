@@ -198,7 +198,7 @@ function renderUserOrder(orderID, productID, purchaseQuantity, orderStatus, ship
                     console.error("Failed to update order state.");
                     return;
                 }
-                showToast("Order Cancelled", "You need to schedule return with the seller for this order before a refund is processed.", null);
+                showToast("Order Cancelled", "You need to schedule a return with the seller for this order before a refund is processed.", null);
                 setTimeout(() => window.location.href = "/orders", 3000);
             });
         });
