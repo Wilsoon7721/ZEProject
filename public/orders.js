@@ -94,7 +94,7 @@ function renderUserOrder(orderID, productID, purchaseQuantity, orderStatus, ship
         let status;
         if(orderStatus === 'pending') {
             if(paymentStatus === 'pending') {
-                status = "Awaiting for payment";
+                status = "Awaiting payment";
                 orderStatusElement.style.color = 'darkgoldenrod';
             } else
                 status = "Waiting for seller to ship your order";
@@ -102,10 +102,14 @@ function renderUserOrder(orderID, productID, purchaseQuantity, orderStatus, ship
             status = "Your order has been shipped";
         } else if(orderStatus === 'delivered') {
             status = "Your order has been delivered";
+        } else if(orderStatus === 'completed') {
+            status = "Order completed";
         } else {
-            status = "Order cancelled";
+            status = "Order cancelled. ";
             if(paymentStatus === 'refunded')
-                status += "Refund processed";
+                status += "Refund has been processed.";
+            else 
+                status += "Contact support for refund.";
             orderStatusElement.style.color = 'red';
         }
         orderStatusElement.innerText = status;
@@ -139,7 +143,8 @@ function renderUserOrder(orderID, productID, purchaseQuantity, orderStatus, ship
 
         let cardFooter = document.createElement('div');
         cardFooter.classList.add('card-footer');
-        cardFooter.setAttribute('order-reference-id', orderID); // For event delegation later
+        cardFooter.setAttribute('order-reference-id', orderID); // For event delegation
+        cardFooter.setAttribute('product-reference-id', productID); // For event delegation 
 
         let receivedButton = document.createElement('button');
         let refundButton = document.createElement('button');
@@ -150,12 +155,52 @@ function renderUserOrder(orderID, productID, purchaseQuantity, orderStatus, ship
         refundButton.style.marginLeft = '10px';
         receivedButton.addEventListener('click', () => {
             let orderId = receivedButton.parentNode.getAttribute('order-reference-id');
-            // Other than setting order to received, also deduct the actual quantity of the product from the stock count in products table
-            
+            let productId = receivedButton.parentNode.getAttribute('product-reference-id');
+            // When seller starts shipping the product, deduct from the stock count in products table
+            fetch('/orders', {
+                method: 'PUT',
+                headers: {
+                    'X-Internal-Endpoint': 'true',
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    orderID: orderId,
+                    productID: productId,
+                    orderStatus: 'completed'
+                })
+            })
+            .then(resp => {
+                if(!resp.ok) {
+                    console.error("Failed to mark order as completed.");
+                    return;
+                }
+                showToast("Order Received", "Enjoy your purchase!", null);
+                setTimeout(() => window.location.href = "/orders", 1500);
+            });
         });
         refundButton.addEventListener('click', () => {
             let orderId = refundButton.parentNode.getAttribute('order-reference-id');
-
+            let productId = refundButton.parentNode.getAttribute('product-reference-id');
+            fetch('/orders', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Internal-Endpoint': 'true'
+                },
+                body: JSON.stringify({
+                    orderID: orderId,
+                    productID: productId,
+                    orderStatus: "cancelled"  
+                })
+            })
+            .then(resp => {
+                if(!resp.ok) {
+                    console.error("Failed to update order state.");
+                    return;
+                }
+                showToast("Order Cancelled", "You need to schedule return with the seller for this order before a refund is processed.", null);
+                setTimeout(() => window.location.href = "/orders", 3000);
+            });
         });
 
         let renderFooter = true;
@@ -192,7 +237,43 @@ function renderUserOrder(orderID, productID, purchaseQuantity, orderStatus, ship
             cancelButton.classList.add('btn', 'btn-danger');
             cancelButton.addEventListener('click', () => {
                 let orderId = cancelButton.parentNode.getAttribute('order-reference-id');
-
+                let productId = cancelButton.parentNode.getAttribute('product-reference-id');
+                fetch('/orders', {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Internal-Endpoint': 'true'
+                    },
+                    body: JSON.stringify({
+                        orderID: orderId,
+                        productID: productId,
+                        orderStatus: "cancelled"  
+                    })
+                })
+                .then(resp => {
+                    if(!resp.ok) {
+                        console.error("Failed to update order state.");
+                        return;
+                    }
+                    // Update payment to refunded
+                    fetch('/custom_query', {
+                        method: 'GET',
+                        headers: {
+                            'X-Internal-Endpoint': 'true',
+                            'X-SQL-Query': `UPDATE payments SET paymentStatus = "refunded" WHERE orderID = ${orderId}`
+                        }
+                    })
+                    .then(resp => {
+                        if(!resp.ok) {
+                            console.error("Failed to update payment to refunded after cancellation.");   
+                            setTimeout(() => window.location.href = "/orders", 1500);
+                            showToast("Order Cancelled", "You have cancelled this order. However, your payment could not be refunded.", "images/cross.jpg");
+                            return;                        
+                        }
+                        setTimeout(() => window.location.href = "/orders", 1500);
+                        showToast("Order Cancelled", "You have cancelled this order. Your payment has been refunded.");
+                    })
+                });
             });
             cardFooter.appendChild(cancelButton);
         } else if(orderStatus === 'shipped') {
@@ -205,7 +286,7 @@ function renderUserOrder(orderID, productID, purchaseQuantity, orderStatus, ship
             cardFooter.appendChild(receivedButton);
             cardFooter.appendChild(refundButton);
         } else {
-            // No buttons (for cancelled), prevent the footer from rendering
+            // No buttons (for completed and cancelled), prevent the footer from rendering
             renderFooter = false;
         }
 
